@@ -95,20 +95,21 @@ console.log('\n[1b] LandXML düşey kurp türleri');
   ok(near(E.evalVertical(v, 200), 110 + e, 1e-9), 'Asimetrik parabol PVI sapması = Lin·Lout/(2L)·A');
   const prf = E.writePRF(v);
   ok(E.checkPRF(prf, v).errors.length === 0, 'Asimetrik parabol PRF kontrolünden geçiyor', E.checkPRF(prf, v).errors.join(' | '));
-  // CircCurve with the file's radius
-  const R = 2000;
-  const pc = [{ station: 0, elev: 100, L: 0 }, { station: 300, elev: 112, L: 999, curveType: 'circ', radius: R }, { station: 600, elev: 106, L: 0 }];
+  // CircCurve: length = HORIZONTAL length (Netcad convention, so Civil3D XML
+  // and the Netcad KTB made from it give the same PRF); R = L/|sin th2 - sin th1|
+  const Lc = 120;
+  const pc = [{ station: 0, elev: 100, L: 0 }, { station: 300, elev: 112, L: Lc, curveType: 'circ', radius: 2000 }, { station: 600, elev: 106, L: 0 }];
   const vc = E.computeVertical(pc);
   const c = vc[1];
   const th1 = Math.atan(0.04), th2 = Math.atan(-0.02);
-  const T = R * Math.tan(Math.abs(th2 - th1) / 2);
-  ok(near(c.station, 300 - T * Math.cos(th1), 1e-9) && near(c.station + c.L, 300 + T * Math.cos(th2), 1e-9), 'CircCurve: BVC/EVC dosyadaki yarıçaptan (uzunluk değil)');
+  const R = Lc / Math.abs(Math.sin(th2) - Math.sin(th1));
+  const h1 = Lc * Math.cos(th1) / (Math.cos(th1) + Math.cos(th2));
+  ok(near(c.station, 300 - h1, 1e-9) && near(c.L, Lc, 1e-9), 'CircCurve: uzunluk yatay boy, BVC = PVI - L·cosθ1/(cosθ1+cosθ2) (Netcad)');
   // point on the circle: distance to centre == R
   const cx = c.station + R * Math.sin(th1), cy = c.elev - R * Math.cos(th1);
   let worst = 0;
   for (let s = c.station; s <= c.station + c.L; s += c.L / 50) worst = Math.max(worst, Math.abs(Math.hypot(s - cx, E.evalVertical(vc, s) - cy) - R));
-  ok(worst < 1e-6, `CircCurve noktaları yarıçaplı daire üzerinde (maks ${worst.toExponential(1)} m)`);
-  ok(E.checkVerticalSource(vc).length === 1, 'Yarıçapla uyuşmayan dosya uzunluğu raporlanıyor');
+  ok(worst < 1e-6, `CircCurve noktaları R = L/|Δsin| dairesi üzerinde (maks ${worst.toExponential(1)} m)`);
   const pc2 = [{ station: 0, elev: 100, L: 0 }, { station: 300, elev: 112, L: 0, curveType: 'circ', radius: R }, { station: 600, elev: 106, L: 0 }];
   pc2[1].L = R * Math.abs(th2 - th1);
   ok(E.checkVerticalSource(E.computeVertical(pc2)).length === 0, 'Yay uzunluğu olarak yazılmış CircCurve length kabul ediliyor');

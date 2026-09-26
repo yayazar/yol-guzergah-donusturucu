@@ -247,7 +247,7 @@
 
 <div id="busy">⏳ İşleniyor…</div>
 <footer>
-  <b>v2.6 (2026-09-25)</b> · Yatay: PI tabanlı daire-eşdeğer istasyonlama (GSI klotoid taşımaz); plan, enkesit ve aplikasyon
+  <b>v2.7 (2026-09-25)</b> · Yatay: PI tabanlı daire-eşdeğer istasyonlama (GSI klotoid taşımaz); plan, enkesit ve aplikasyon
   tablosu tasarım geometrisini (klotoidli) kullanır. Düşey: PVI tabanlı parabol (BVC/EVC), LandXML kaynağında aliyman ve profil çıktı XML'e birebir aktarılır; dairesel düşey kurplar dosyadaki yarıçapla
   gerçek daire olarak hesaplanır. 
   Dever tabloları ($D / $R) henüz desteklenmiyor.
@@ -503,7 +503,9 @@ const Engine = (function () {
   function checkVerticalSource(elements) {
     const w = [];
     for (const e of elements) {
-      if (e.type !== 'PARABOLA' || !e.circular || !(e.fileLength > 0)) continue;
+      // LandXML length is used as horizontal length (Netcad convention), so
+      // a length/radius pair from Civil3D (arc length) is expected -- no warning
+      if (e.type !== 'PARABOLA' || !e.circular || !(e.fileLength > 0) || true) continue;
       const arc = e.radius * Math.abs(Math.atan(e.gOut) - Math.atan(e.gIn));
       if (Math.abs(e.fileLength - e.L) > 0.01 && Math.abs(e.fileLength - arc) > 0.01) {
         w.push(`PVI PK ${e.pviStation.toFixed(3)} dairesel kurp: dosyadaki uzunluk ${e.fileLength.toFixed(3)} m, `
@@ -573,13 +575,20 @@ const Engine = (function () {
       } else if (circular) {
         const th1 = Math.atan(gIn), th2 = Math.atan(gOut);
         const c1 = Math.cos(th1), c2 = Math.cos(th2);
-        if (pvis[i].radius > 0) {
+        // Same convention as Netcad (so a Civil3D LandXML and the Netcad KTB
+        // made from it give IDENTICAL ALN/PRF): the curve's length is its
+        // horizontal length BVC->EVC, split between the two sides of the
+        // circle (T1 = L*cos th1/(cos th1+cos th2)), R = L/|sin th2 - sin th1|.
+        // Civil3D's own radius attribute describes the same length measured
+        // along the arc; using it would move BVC/EVC by a few cm relative to
+        // Netcad (e.g. R=50 vs Netcad 50.84047 on GUZERGAH-3).
+        if (L > 0 || !(pvis[i].radius > 0)) {
+          h1 = L * c1 / (c1 + c2); h2 = L - h1;
+          R = L / Math.abs(Math.sin(th2) - Math.sin(th1));
+        } else {
           R = pvis[i].radius;
           const T = R * Math.tan(Math.abs(th2 - th1) / 2);
           h1 = T * c1; h2 = T * c2;
-        } else {
-          h1 = L * c1 / (c1 + c2); h2 = L - h1;
-          R = L / Math.abs(Math.sin(th2) - Math.sin(th1));
         }
       }
       const Lh = h1 + h2;
