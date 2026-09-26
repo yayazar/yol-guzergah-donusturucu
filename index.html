@@ -1,0 +1,3409 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Yol Güzergahı Dönüştürücü — KTB/LandXML ⇄ GSI-16 (ALN/PRF) ⇄ GNSS LandXML</title>
+<style>
+  :root{
+    --bg:#0f1420; --panel:#161d2e; --panel2:#1c2540; --border:#2a3550;
+    --text:#e8ecf5; --muted:#8f9bbd; --accent:#4f8cff; --accent2:#33c17a;
+    --warn:#e0a942; --danger:#e0546a; --mono:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:linear-gradient(180deg,#0b0f1a,#0f1420 300px);color:var(--text);
+       font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;line-height:1.5;padding-bottom:60px;}
+  header{padding:28px 20px 10px;max-width:1100px;margin:0 auto;}
+  header h1{font-size:22px;margin:0 0 4px;}
+  header p{color:var(--muted);margin:0;font-size:14px;}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 20px;display:flex;flex-direction:column;gap:16px;}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px 20px;}
+  .card h2{font-size:15px;margin:0 0 12px;display:flex;align-items:center;gap:8px;}
+  .card h2 .n{background:var(--accent);color:#fff;width:22px;height:22px;border-radius:50%;
+              display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;}
+  .drop{border:2px dashed var(--border);border-radius:10px;padding:26px;text-align:center;color:var(--muted);
+        cursor:pointer;transition:.15s;font-size:14px;}
+  .drop.drag{border-color:var(--accent);background:#132038;color:var(--text);}
+  .drop small{display:block;margin-top:6px;opacity:.7;}
+  input[type=file]{display:none;}
+  .filelist{margin-top:10px;display:flex;flex-direction:column;gap:6px;}
+  .fileitem{display:flex;justify-content:space-between;align-items:center;background:var(--panel2);
+            border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:13px;}
+  .fileitem b{color:var(--text);}
+  .fileitem span{color:var(--muted);}
+  .fileitem .badge{background:var(--accent2);color:#04240f;border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700;}
+  .fileitem .rm{cursor:pointer;color:var(--danger);font-weight:700;padding:0 4px;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;}
+  input[type=number],input[type=text]{width:100%;background:#0e1424;border:1px solid var(--border);
+        color:var(--text);border-radius:8px;padding:9px 10px;font-size:14px;}
+  input:focus{outline:2px solid var(--accent);}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .chk{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);}
+  button{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:10px 16px;
+         font-size:14px;font-weight:600;cursor:pointer;transition:.15s;}
+  button:hover{filter:brightness(1.1);}
+  button.secondary{background:var(--panel2);border:1px solid var(--border);color:var(--text);}
+  button.green{background:var(--accent2);color:#04240f;}
+  button:disabled{opacity:.4;cursor:not-allowed;}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  th,td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--border);white-space:nowrap;}
+  th{color:var(--muted);font-weight:600;text-align:right;}
+  td:first-child,th:first-child{text-align:left;}
+  .tablewrap{max-height:280px;overflow:auto;border:1px solid var(--border);border-radius:8px;}
+  .stat{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:10px;}
+  .stat div{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;min-width:110px;}
+  .stat div b{display:block;font-size:18px;}
+  .stat div span{font-size:11px;color:var(--muted);}
+  textarea{width:100%;min-height:110px;background:#0e1424;border:1px solid var(--border);color:var(--text);
+           border-radius:8px;padding:10px;font-family:var(--mono);font-size:12px;}
+  pre{background:#0a0f1c;border:1px solid var(--border);border-radius:8px;padding:12px;overflow:auto;
+      font-family:var(--mono);font-size:12px;max-height:260px;}
+  .msg{padding:10px 14px;border-radius:8px;font-size:13px;margin-top:8px;}
+  .msg.info{background:#132038;border:1px solid var(--accent);}
+  .msg.warn{background:#2a2213;border:1px solid var(--warn);color:#f0d090;}
+  .msg.err{background:#2b1520;border:1px solid var(--danger);color:#f5aab8;}
+  .msg.ok{background:#0f2b1c;border:1px solid var(--accent2);color:#a9f0cd;}
+  .tag{font-size:10px;padding:2px 6px;border-radius:5px;background:var(--panel2);border:1px solid var(--border);color:var(--muted);}
+  .tag.c{color:#7fc2ff;border-color:#31507f;}
+  .tag.sp{color:#4f6cff;border-color:#2a3a99;}
+  .tag.s{color:#8fd6a8;border-color:#2f6b45;}
+  svg{background:#0a0f1c;border:1px solid var(--border);border-radius:8px;width:100%;height:280px;}
+  .tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+  .tabs button{background:var(--panel2);color:var(--muted);font-weight:600;font-size:13px;padding:8px 14px;}
+  .tabs button.active{background:var(--accent);color:#fff;}
+  footer{max-width:1100px;margin:20px auto 0;padding:0 20px;color:var(--muted);font-size:12px;}
+  .diffgood{color:#8fd6a8;} .diffwarn{color:#f0d090;} .diffbad{color:#f5aab8;}
+  .hint{font-size:12px;color:var(--muted);margin-top:6px;}
+  a.dl{color:var(--accent);text-decoration:none;font-weight:600;}
+  select.inp{width:100%;background:#0e1424;border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 10px;font-size:14px;}
+  #busy{position:fixed;top:14px;right:14px;background:var(--panel2);border:1px solid var(--accent);border-radius:10px;
+        padding:10px 16px;font-size:13px;display:none;z-index:10;}
+  #svgPlan{cursor:grab;touch-action:none;}
+  .qres{font-family:var(--mono);font-size:13px;margin-top:8px;}
+</style>
+</head>
+<body>
+<header>
+  <h1>🛣️ Yol Güzergahı Dönüştürücü</h1>
+  <p>Netcad (.KTB) veya LandXML güzergahını <b>GSI-16 (ALN/PRF)</b> total station dosyalarına ve GNSS için
+     <b>LandXML</b> çıktısına dönüştürür — yatay/düşey geometri motoru gerçek saha verisiyle doğrulanmıştır.</p>
+</header>
+
+<div class="wrap">
+
+  <!-- 1. UPLOAD -->
+  <div class="card">
+    <h2><span class="n">1</span> Dosya Yükle</h2>
+    <div class="drop" id="drop">
+      📂 <b>.KTB</b> veya <b>.xml / .landxml</b> dosyasını buraya sürükleyin, ya da tıklayıp seçin
+      (isteğe bağlı olarak aynı anda <b>.KSP</b> veya <b>.KSE</b> enkesit dosyasını da ekleyebilirsiniz)
+      <small>Netcad "Karayolu" güzergah dosyası veya Civil3D/Netcad LandXML çıktısı + enkesit</small>
+    </div>
+    <input type="file" id="fileInput" accept=".ktb,.xml,.landxml,.ksp,.kse" multiple>
+    <div class="filelist" id="fileList"></div>
+    <div id="parseMsg"></div>
+  </div>
+
+  <!-- 2. SETTINGS -->
+  <div class="card" id="settingsCard" style="display:none">
+    <h2><span class="n">2</span> Çıktı Aralığı ve Ayarlar</h2>
+    <div class="stat" id="routeStats"></div>
+    <div class="grid">
+      <div>
+        <label>Başlangıç PK (m)</label>
+        <input type="number" id="pkStart" step="0.001">
+      </div>
+      <div>
+        <label>Bitiş PK (m)</label>
+        <input type="number" id="pkEnd" step="0.001">
+      </div>
+      <div>
+        <label>Güzergah adı</label>
+        <input type="text" id="routeName" value="GUZERGAH">
+      </div>
+      <div>
+        <label>Aralık ucu birleştirme toleransı (m)</label>
+        <input type="number" id="tolInput" value="1.0" step="0.1">
+      </div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <label class="chk"><input type="checkbox" id="useSpiral"> KTB'den LandXML üretirken gerçek klotoid (S-C-S) geometrisi kullan (yalnız Ls1=Ls2 simetrik geçiş eğrilerinde; asimetrik olanlarda daire ile eşdeğerlenir). LandXML kaynağında aliyman ve profil değiştirilmeden aynen aktarılır.</label>
+      <label class="chk"><input type="checkbox" id="useMesh" checked> Enkesitlerden üçgen yüzey (TIN) oluştur (ardışık kesitleri aynı etiketli noktalardan eşleştirip üçgenler)</label>
+    </div>
+    <div class="hint">
+      ALN/PRF (GSI-16) çıktısı her zaman <b>daire-eşdeğer</b> yöntemle üretilir — bu, gerçek Netcad saha
+      çıktısıyla karşılaştırmalı test edilmiş yöntemdir (bkz. "Doğrulama" bölümü) ve GSI-16 alan formatının
+      zaten klotoid taşımamasına dayanır.
+    </div>
+    <div id="alignPick" style="display:none;margin-top:10px">
+      <label>LandXML güzergahı (dosyada birden fazla var)</label>
+      <select id="alignSelect" class="inp"></select>
+    </div>
+    <button id="btnCompute" style="margin-top:14px">Hesapla ve Önizle →</button>
+    <div id="computeNote" style="margin-top:10px"></div>
+  </div>
+
+  <!-- 3. PREVIEW -->
+  <div class="card" id="previewCard" style="display:none">
+    <h2><span class="n">3</span> Önizleme</h2>
+    <div class="tabs">
+      <button class="ptab active" data-t="plan">Plan (Yatay)</button>
+      <button class="ptab" data-t="profil">Profil (Düşey)</button>
+      <button class="ptab" data-t="kesit" id="tabKesit" style="display:none">Enkesitler</button>
+      <button class="ptab" data-t="tabloH">Yatay Tablo</button>
+      <button class="ptab" data-t="tabloV">Düşey Tablo</button>
+    </div>
+    <div id="pv-plan"><svg id="svgPlan" viewBox="0 0 1000 400"></svg>
+      <div class="hint" id="planInfo">Fare tekerleği: yakınlaştır · sürükle: kaydır · çift tık: sığdır · üzerine gelince PK/ofset görünür</div></div>
+    <div id="pv-profil" style="display:none"><svg id="svgProfil" viewBox="0 0 1000 400"></svg></div>
+    <div id="pv-kesit" style="display:none">
+      <div class="row" style="margin-bottom:10px">
+        <button class="secondary" id="xsPrev">◀ Önceki</button>
+        <select id="xsSelect" style="flex:1;background:#0e1424;border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px"></select>
+        <button class="secondary" id="xsNext">Sonraki ▶</button>
+      </div>
+      <svg id="svgKesit" viewBox="0 0 1000 400"></svg>
+      <div class="tablewrap" style="margin-top:10px"><table id="tblKesit"></table></div>
+      <h3 style="font-size:13px;margin:14px 0 6px">Kod birleşimi (aynı kod + aynı taraf kesitten kesite birleştirilir)</h3>
+      <div class="hint">Birleşen kod çizgileri Plan sekmesinde de gösterilir. Bir kod ~2,5 kesit aralığından uzun süre yoksa çizgi orada kesilir.</div>
+      <div class="tablewrap" style="margin-top:6px"><table id="tblKodlar"></table></div>
+    </div>
+    <div id="pv-tabloH" style="display:none">
+      <div class="tablewrap"><table id="tblH"></table></div>
+      <h3 style="font-size:13px;margin:14px 0 6px">Kurp Giriş/Çıkış (PC/PT) Özeti</h3>
+      <div class="tablewrap"><table id="tblCurveSummary"></table></div>
+    </div>
+    <div id="pv-tabloV" style="display:none"><div class="tablewrap"><table id="tblV"></table></div></div>
+  </div>
+
+  <!-- 4. EXPORT -->
+  <div class="card" id="exportCard" style="display:none">
+    <h2><span class="n">4</span> Çıktılar</h2>
+    <div class="row">
+      <button class="green" id="dlAln">⬇ ALN (.gsi) indir</button>
+      <button class="green" id="dlPrf">⬇ PRF (.gsi) indir</button>
+      <button class="green" id="dlXml">⬇ LandXML (GNSS) indir</button>
+    </div>
+    <div class="hint">GSI dosyaları saha cihazlarıyla uyum için <b>Windows-1254 / ISO-8859-9</b> (Türkçe) karakter
+      kümesiyle, CRLF satır sonlarıyla kaydedilir — orijinal Netcad çıktılarıyla birebir aynı bayt yapısında.</div>
+  </div>
+
+  <!-- 5. STAKEOUT / QUERY -->
+  <div class="card" id="toolsCard" style="display:none">
+    <h2><span class="n">5</span> Aplikasyon Tablosu ve Nokta Sorgu</h2>
+    <div class="grid">
+      <div><label>Aralık (m)</label><input type="number" id="stakeInterval" value="20" step="1" min="0"></div>
+      <div style="grid-column:span 2"><label>Ofsetler (m, sol negatif, virgül ile)</label><input type="text" id="stakeOffsets" value="-3.5, 0, 3.5"></div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <label class="chk"><input type="checkbox" id="stakeKeys" checked> Ana noktaları ekle (TS/SC/CS/ST, KB/KS, BVC/EVC)</label>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button id="btnStake">Tabloyu oluştur</button>
+      <button class="green" id="dlStakeCsv" disabled>⬇ Excel (.csv)</button>
+      <button class="green" id="dlStakeTxt" disabled>⬇ Nokta dosyası (.txt)</button>
+    </div>
+    <div class="hint">Seçili PK aralığında, tasarım geometrisiyle (varsa klotoidli) hesaplanır. "Z eksen": profil kotu;
+      "Z kesit": enkesitten enterpolasyon (yalnız enkesit yüklüyse ve ofset kesit içindeyse). Nokta dosyasında Z için önce kesit kotu,
+      ofset 0 ise eksen kotu kullanılır, bilinmiyorsa 0.000 yazılır.</div>
+    <div id="stakeMsg"></div>
+    <div class="tablewrap" style="margin-top:10px"><table id="tblStake"></table></div>
+
+    <h3 style="font-size:13px;margin:16px 0 6px">Nokta sorgu</h3>
+    <div class="grid">
+      <div><label>PK (m)</label><input type="number" id="qPk" step="0.001"></div>
+      <div><label>Ofset (m, sağ +)</label><input type="number" id="qOff" step="0.001" value="0"></div>
+      <div style="display:flex;align-items:flex-end"><button class="secondary" id="btnQFwd" style="width:100%">PK/Ofset → Koordinat</button></div>
+    </div>
+    <div class="grid" style="margin-top:8px">
+      <div><label>Y (Sağa, E)</label><input type="number" id="qE" step="0.001"></div>
+      <div><label>X (Yukarı, N)</label><input type="number" id="qN" step="0.001"></div>
+      <div style="display:flex;align-items:flex-end"><button class="secondary" id="btnQInv" style="width:100%">Koordinat → PK/Ofset</button></div>
+    </div>
+    <div id="qOut" class="qres"></div>
+  </div>
+
+  <!-- 6. VALIDATE -->
+  <div class="card" id="validateCard" style="display:none">
+    <h2><span class="n">6</span> Doğrulama — Netcad'in kendi ALN/PRF çıktısıyla karşılaştır</h2>
+    <p class="hint">Elinizde Netcad'den alınmış gerçek bir ALN veya PRF varsa buraya yapıştırın/yükleyin;
+      hesaplanan değerlerle istasyon/koordinat/kot farkını gösterir.</p>
+    <div class="grid" style="grid-template-columns:1fr 1fr">
+      <div>
+        <label>Referans ALN içeriği</label>
+        <textarea id="refAln" placeholder="*41....+... ALN dosyası içeriğini buraya yapıştırın"></textarea>
+      </div>
+      <div>
+        <label>Referans PRF içeriği</label>
+        <textarea id="refPrf" placeholder="*41....+... PRF dosyası içeriğini buraya yapıştırın"></textarea>
+      </div>
+    </div>
+    <button class="secondary" id="btnCompare" style="margin-top:10px">Karşılaştır</button>
+    <div id="compareOut" style="margin-top:12px"></div>
+  </div>
+
+</div>
+
+<div id="busy">⏳ İşleniyor…</div>
+<footer>
+  <b>v2.6 (2026-09-25)</b> · Yatay: PI tabanlı daire-eşdeğer istasyonlama (GSI klotoid taşımaz); plan, enkesit ve aplikasyon
+  tablosu tasarım geometrisini (klotoidli) kullanır. Düşey: PVI tabanlı parabol (BVC/EVC), LandXML kaynağında aliyman ve profil çıktı XML'e birebir aktarılır; dairesel düşey kurplar dosyadaki yarıçapla
+  gerçek daire olarak hesaplanır. 
+  Dever tabloları ($D / $R) henüz desteklenmiyor.
+</footer>
+
+<script>
+/* ============================================================
+   ENGINE  (geometry / parsing / GSI + LandXML read-write)
+   ============================================================ */
+/* ============================================================
+   ROUTE <-> FIELD CONVERTER ENGINE
+   Netcad KTB / LandXML  <->  GSI-16 (ALN/PRF)  <->  GNSS LandXML
+   ============================================================ */
+
+const Engine = (function () {
+
+  // ---------- small utils ----------
+  function dist(a, b) { return Math.hypot(b.E - a.E, b.N - a.N); }
+  function az(a, b) {
+    let v = Math.atan2(b.E - a.E, b.N - a.N);
+    if (v < 0) v += 2 * Math.PI;
+    return v;
+  }
+  function normDelta(d) {
+    while (d > Math.PI) d -= 2 * Math.PI;
+    while (d < -Math.PI) d += 2 * Math.PI;
+    return d;
+  }
+  function round3(x) { return Math.round(x * 1000) / 1000; }
+
+  // ============================================================
+  // KTB PARSER (Netcad)
+  // ============================================================
+  // "$DÜŞEY", "$Dusey", "$YATAY GEOMETRİ", "$YATAY:" -> "DUSEY" / "YATAY"
+  function ktbSectionName(line) {
+    const w = line.slice(1).trim().split(/[\s:;,=]+/)[0] || '';
+    return w.toLocaleUpperCase('tr-TR')
+      .replace(/Ç/g, 'C').replace(/Ğ/g, 'G').replace(/İ/g, 'I').replace(/Ö/g, 'O').replace(/Ş/g, 'S').replace(/Ü/g, 'U')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9_]/g, '');
+  }
+
+  function parseKTB(text) {
+    const lines = String(text).replace(/^\uFEFF/, '').replace(/\u0000/g, '').split(/\r\n|\r|\n/);
+    const sections = {};
+    let cur = null, buf = [];
+    for (let raw of lines) {
+      const line = raw.trim();
+      if (line.startsWith('$')) {
+        const name = ktbSectionName(line);
+        if (cur) sections[cur] = (sections[cur] || []).concat(buf);
+        buf = [];
+        cur = (name === 'SON' || name === 'END') ? null : name;
+        continue;
+      }
+      if (cur !== null && line.length) buf.push(line);
+    }
+    if (cur) sections[cur] = buf;
+
+    const result = { pvis: [], pis: [], km0: 0, raw: sections, skipped: [] };
+
+    // accept the usual alternative names of the two geometry sections
+    const alias = { YATAY: ['YATAY', 'YATAYGEOMETRI', 'PLAN', 'HORIZONTAL'], DUSEY: ['DUSEY', 'DUSEYGEOMETRI', 'PROFIL', 'VERTICAL'] };
+    for (const key in alias) {
+      if (!sections[key]) {
+        const hit = alias[key].find(a => sections[a])
+          || Object.keys(sections).find(n => n.startsWith(key.slice(0, 5)));
+        if (hit) sections[key] = sections[hit];
+      }
+    }
+    if (sections['KM0'] && sections['KM0'][0] != null) {
+      result.km0 = parseFloat(sections['KM0'][0]) || 0;
+    }
+
+    // Numbers may carry a leading +, an exponent, or a comma decimal
+    // separator (e.g. "1,5E+3") -- normalise before parsing.
+    const NUM = '[-+]?(?:\\d+[.,]?\\d*|[.,]\\d+)(?:[eE][-+]?\\d+)?';
+    // "0+250.00" (km+m) station form is read as 250
+    const num = s => {
+      if (s == null) return NaN;
+      const t = String(s).replace(/[;,]+$/, '');
+      const km = /^([-+]?\d+)\+(\d+(?:[.,]\d*)?)$/.exec(t);
+      if (km) return parseFloat(km[1]) * 1000 + parseFloat(km[2].replace(',', '.'));
+      return parseFloat(t.replace(',', '.'));
+    };
+
+    // Row filter: Netcad writes every real row with the FULL column set
+    // ($YATAY: NAME E N R yön dever Ls1 Ls2, $DUSEY: PK KOT L). Other rows
+    // inside a section (counts, headers, notes) must not become geometry,
+    // so when the section has full rows, shorter rows are accepted only as
+    // the very first/last point (start/end points are sometimes written
+    // without the curve columns) -- anything else is reported as skipped.
+    const tok = l => l.split(/[\s;]+/).filter(Boolean);
+    // a token counts as a number if it IS one, allowing a trailing
+    // separator and the km+m station form
+    const isNum = t => t != null && new RegExp(`^(?:${NUM}|[-+]?\\d+\\+\\d+(?:[.,]\\d*)?)[;,]?$`).test(t);
+
+    if (sections['DUSEY']) {
+      // Rows may start with a point name ("PVI1 250.00 104.50 80") or a
+      // running number ("1 250.00 104.50 80"); both are dropped so that the
+      // columns are always PK KOT L.
+      let dRows = sections['DUSEY'].map(l => {
+        let p = tok(l);
+        if (p.length >= 3 && !isNum(p[0]) && isNum(p[1]) && isNum(p[2])) p = p.slice(1);
+        return { l, p };
+      });
+      const numeric = dRows.filter(r => r.p.length >= 4 && r.p.slice(0, 4).every(isNum));
+      if (numeric.length >= 2 && numeric.length >= dRows.length / 2) {
+        const idx = numeric.map(r => num(r.p[0]));
+        const running = idx.every((v, k) => Number.isInteger(v) && (k === 0 || v === idx[k - 1] + 1));
+        const sta = numeric.map(r => num(r.p[1]));
+        const increasing = sta.every((v, k) => k === 0 || v > sta[k - 1]);
+        if (running && increasing) dRows = dRows.map(r => (r.p.length >= 4 && r.p.slice(0, 4).every(isNum) ? { l: r.l, p: r.p.slice(1) } : r));
+      }
+      const rows = dRows.filter(r => r.p.length >= 2 && isNum(r.p[0]) && isNum(r.p[1]));
+      const full = rows.filter(r => r.p.length >= 3 && isNum(r.p[2]));
+      const strict = full.length >= 2;
+      const isFullV = r => r.p.length >= 3 && isNum(r.p[2]);
+      const fullSta = full.map(r => num(r.p[0]));
+      rows.forEach((r, k) => {
+        // a short first/last row is a start/end PVI only if it continues the
+        // station order (a leading "count" row such as "6 3" does not)
+        const edgeOk = (k === 0 && fullSta.length && num(r.p[0]) < fullSta[0])
+          || (k === rows.length - 1 && fullSta.length && num(r.p[0]) > fullSta[fullSta.length - 1]);
+        const ok = !strict || isFullV(r) || edgeOk;
+        if (!ok) { result.skipped.push('$DUSEY: ' + r.l); return; }
+        const pvi = { station: num(r.p[0]), elev: num(r.p[1]), L: isNum(r.p[2]) ? num(r.p[2]) : 0 };
+        // Netcad row: PK KOT L tip T1 T2 R -- the vertical curve is a CIRCLE
+        // of radius R; T1/T2 are its horizontal tangent lengths before/after
+        // the PVI (unequal: BVC = PK - T1, EVC = PK + T2). Netcad's own PRF
+        // uses exactly these stations, so they are taken as-is.
+        if (r.p.length >= 7 && r.p.slice(4, 7).every(isNum)) {
+          const T1 = num(r.p[4]), T2 = num(r.p[5]), R = num(r.p[6]);
+          if (T1 > 0 && T2 > 0) Object.assign(pvi, { T1, T2, curveType: 'circ', radius: R > 0 ? R : undefined });
+        }
+        result.pvis.push(pvi);
+      });
+      for (const r of dRows) if (!rows.includes(r)) result.skipped.push('$DUSEY: ' + r.l);
+    }
+
+    if (sections['YATAY']) {
+      const rows = [];
+      for (const l of sections['YATAY']) {
+        const p = tok(l);
+        if (p.length >= 3 && isNum(p[1]) && isNum(p[2])) rows.push({ l, p });
+        else result.skipped.push('$YATAY: ' + l);
+      }
+      // full row: NAME E N R flag dever Ls1 Ls2 (flag may be any token)
+      const isFull = p => p.length >= 8 && isNum(p[3]) && isNum(p[5]) && isNum(p[6]) && isNum(p[7]);
+      const strict = rows.filter(r => isFull(r.p)).length >= 2;
+      rows.forEach((r, k) => {
+        const p = r.p;
+        const full = isFull(p);
+        if (strict && !full && k !== 0 && k !== rows.length - 1) { result.skipped.push('$YATAY: ' + r.l); return; }
+        result.pis.push({
+          name: p[0],
+          E: num(p[1]),
+          N: num(p[2]),
+          R: isNum(p[3]) ? num(p[3]) : 0,
+          dever: full ? num(p[5]) || 0 : 0,
+          Ls1: full ? num(p[6]) || 0 : 0,
+          Ls2: full ? num(p[7]) || 0 : 0,
+        });
+      });
+    }
+
+    // Some Netcad KTB exports put the transition (spiral) lengths in a
+    // SEPARATE $GECIS section ("NAME flag Ls1 Ls2" per line) instead of
+    // columns 7-8 of $YATAY. But which section actually holds the real
+    // data varies by file: some exports leave $YATAY's own Ls columns at
+    // 0.00000 and put the real lengths in $GECIS; others (confirmed on
+    // real data) do the opposite -- $YATAY already has the true values
+    // and $GECIS is a stale all-zero placeholder for every point. Blindly
+    // preferring one section unconditionally corrupts whichever file uses
+    // the other convention. Only override with $GECIS's number when it is
+    // actually non-zero -- a zero there is "no data", not "the value is
+    // zero", so it never overwrites a real value already read from $YATAY.
+    if (sections['GECIS']) {
+      const byName = {};
+      result.pis.forEach(p => { byName[p.name] = p; });
+      for (const l of sections['GECIS']) {
+        const m = l.match(new RegExp(`^(\\S+)\\s+(\\S+)\\s+(${NUM})\\s+(${NUM})`));
+        if (m && byName[m[1]]) {
+          const gLs1 = num(m[3]), gLs2 = num(m[4]);
+          if (gLs1 > 0) byName[m[1]].Ls1 = gLs1;
+          if (gLs2 > 0) byName[m[1]].Ls2 = gLs2;
+        }
+      }
+    }
+    return result;
+  }
+
+  // ============================================================
+  // VERTICAL GEOMETRY  (PVI list -> STRAIGHT/PARABOLA/EOP elements)
+  //  Validated against real Netcad PRF export (mm-level match).
+  // ============================================================
+  // Self-check: flag geometry that this PI-tangent model cannot represent
+  // correctly -- most commonly closely-spaced curves (e.g. mountain-road
+  // switchbacks/hairpins) whose tangent lengths overlap, which makes the
+  // computed stationing run backwards. Silently emitting wrong numbers for
+  // field stakeout is worse than refusing to guess: this makes the problem
+  // visible (which curve, which station) instead.
+  function validateHorizontal(elements) {
+    const warnings = [];
+    for (let i = 0; i < elements.length - 1; i++) {
+      if (elements[i + 1].station < elements[i].station - 1e-3) {
+        warnings.push(`Yatay: PK ${elements[i].station.toFixed(2)} → ${elements[i + 1].station.toFixed(2)} arasında istasyon geri gidiyor. `
+          + `Muhtemel neden: bu iki eleman arasındaki kurplar iç içe geçiyor (dar yarıçap + kısa mesafeli ardışık kurplar/menderes -- örn. sık viraj). `
+          + `Bu aralıktaki ALN/PRF çıktısı GÜVENİLMEZ, elle kontrol edin.`);
+      }
+    }
+    return warnings;
+  }
+  function validateVertical(elements) {
+    const warnings = [];
+    for (let i = 0; i < elements.length - 1; i++) {
+      if (elements[i + 1].station < elements[i].station - 1e-3) {
+        warnings.push(`Düşey: PK ${elements[i].station.toFixed(2)} → ${elements[i + 1].station.toFixed(2)} arasında istasyon geri gidiyor. `
+          + `Muhtemel neden: ardışık PVI'ler arasındaki mesafe, tanımlı rakor uzunluklarının toplamından kısa (rakorlar çakışıyor). `
+          + `Bu aralıktaki PRF çıktısı GÜVENİLMEZ, elle kontrol edin.`);
+      }
+    }
+    return warnings;
+  }
+
+  // Sanity-check the RAW parsed PVI list before any curve math runs. This
+  // catches a mis-parsed/mis-scaled "L" (curve length) column early --
+  // exactly the kind of problem that would corrupt PRF output while
+  // leaving ALN untouched (ALN never reads the vertical data at all).
+  function sanityCheckPvis(pvis) {
+    const warnings = [];
+    for (let i = 1; i < pvis.length - 1; i++) {
+      const L = pvis[i].L;
+      if (L == null || isNaN(L)) continue;
+      if (L < 0) {
+        warnings.push(`PVI PK ${pvis[i].station}: rakor uzunluğu (L) negatif (${L}) — $DUSEY sütunları yanlış okunmuş olabilir.`);
+        continue;
+      }
+      const dPrev = pvis[i].station - pvis[i - 1].station;
+      const dNext = pvis[i + 1].station - pvis[i].station;
+      const avail = Math.min(dPrev, dNext) * 2; // generous upper bound: L can't sanely exceed ~2x the shorter neighbour gap
+      if (L > avail && avail > 0) {
+        warnings.push(`PVI PK ${pvis[i].station}: rakor uzunluğu (L=${L}) komşu PVI mesafelerine göre aşırı büyük `
+          + `(önceki ${dPrev.toFixed(1)} m, sonraki ${dNext.toFixed(1)} m). Bu genellikle L sütununun yanlış okunduğunu `
+          + `(farklı birim/format) gösterir — PRF çıktısı bu bölgede güvenilmez olabilir.`);
+      }
+    }
+    return warnings;
+  }
+
+  // Circular vertical curves carry both radius and length in LandXML; the
+  // radius is what defines the curve. Flag a length that matches neither the
+  // horizontal nor the arc length of that circle (inconsistent source data).
+  function checkVerticalSource(elements) {
+    const w = [];
+    for (const e of elements) {
+      if (e.type !== 'PARABOLA' || !e.circular || !(e.fileLength > 0)) continue;
+      const arc = e.radius * Math.abs(Math.atan(e.gOut) - Math.atan(e.gIn));
+      if (Math.abs(e.fileLength - e.L) > 0.01 && Math.abs(e.fileLength - arc) > 0.01) {
+        w.push(`PVI PK ${e.pviStation.toFixed(3)} dairesel kurp: dosyadaki uzunluk ${e.fileLength.toFixed(3)} m, `
+          + `R=${e.radius.toFixed(3)} ile yatay uzunluk ${e.L.toFixed(3)} m / yay uzunluğu ${arc.toFixed(3)} m. Yarıçap esas alındı.`);
+      }
+    }
+    return w;
+  }
+
+  function computeVertical(pvis) {
+    const n = pvis.length;
+    if (n < 2) return [];
+    function grade(i, j) { return (pvis[j].elev - pvis[i].elev) / (pvis[j].station - pvis[i].station); }
+
+    const elements = [];
+    elements.push({ type: 'STRAIGHT', station: pvis[0].station, elev: pvis[0].elev, pvi: null });
+
+    for (let i = 1; i < n - 1; i++) {
+      const L = pvis[i].L;
+      if (!L || L <= 0) {
+        // No vertical curve defined at this PVI -- it is still a real grade
+        // break, so it must stay in the element list as a plain knot (a
+        // "zero-length" transition) or every station on either side of it
+        // would be linearly interpolated straight through, ignoring the
+        // actual change in grade.
+        elements.push({ type: 'STRAIGHT', station: pvis[i].station, elev: pvis[i].elev, pvi: null });
+        continue;
+      }
+      const gIn = grade(i - 1, i);
+      const gOut = grade(i, i + 1);
+      if (Math.abs(gOut - gIn) < 1e-12) {
+        // Collinear PVI: no grade change, so no rakor either (a PARABOLA
+        // here would carry K = L/0 and break the PRF reader).
+        elements.push({ type: 'STRAIGHT', station: pvis[i].station, elev: pvis[i].elev, pvi: null });
+        continue;
+      }
+      const pviS = pvis[i].station, pviE = pvis[i].elev;
+
+      if (pvis[i].curveType === 'unsym' && pvis[i].Lin > 0 && pvis[i].Lout > 0) {
+        // LandXML <UnsymParaCurve lengthIn lengthOut>: two parabolas joined
+        // under the PVI with a common tangent equal to the BVC->EVC chord
+        // grade gm. Each half is an ordinary parabola, so it is written as
+        // two PARABOLA records (BVC and PVI) -- PRF can carry that exactly.
+        const Lin = pvis[i].Lin, Lout = pvis[i].Lout;
+        const bvcE = pviE - gIn * Lin, evcE = pviE + gOut * Lout;
+        const gm = (evcE - bvcE) / (Lin + Lout);
+        const joinE = bvcE + Lin * (gIn + gm) / 2;
+        const K1 = Lin / ((gm - gIn) * 100), K2 = Lout / ((gOut - gm) * 100);
+        elements.push({ type: 'PARABOLA', station: pviS - Lin, elev: bvcE, K: K1, gIn, gOut: gm, L: Lin, pviStation: pviS, pviElev: pviE, unsym: 1 });
+        elements.push({ type: 'PARABOLA', station: pviS, elev: joinE, K: K2, gIn: gm, gOut, L: Lout, pviStation: pviS, pviElev: pviE, unsym: 2 });
+        elements.push({ type: 'STRAIGHT', station: pviS + Lout, elev: evcE, pvi: null });
+        continue;
+      }
+
+      const circular = pvis[i].curveType === 'circ';
+      // Horizontal distances BVC -> PVI (h1) and PVI -> EVC (h2). A parabola
+      // is symmetric (L/2 each). A true circle tangent to both grade lines
+      // has tangent length T = R*tan(dTheta/2), projected on the horizontal
+      // as T*cos(theta1) and T*cos(theta2). The circle is fixed by R (the
+      // file's own radius, used as-is when present); without R it is derived
+      // from the horizontal length L.
+      let h1 = L / 2, h2 = L / 2, R = null;
+      if (pvis[i].T1 > 0 && pvis[i].T2 > 0) {
+        // Netcad KTB: tangent lengths given directly
+        h1 = pvis[i].T1; h2 = pvis[i].T2;
+        R = pvis[i].radius || null;
+      } else if (circular) {
+        const th1 = Math.atan(gIn), th2 = Math.atan(gOut);
+        const c1 = Math.cos(th1), c2 = Math.cos(th2);
+        if (pvis[i].radius > 0) {
+          R = pvis[i].radius;
+          const T = R * Math.tan(Math.abs(th2 - th1) / 2);
+          h1 = T * c1; h2 = T * c2;
+        } else {
+          h1 = L * c1 / (c1 + c2); h2 = L - h1;
+          R = L / Math.abs(Math.sin(th2) - Math.sin(th1));
+        }
+      }
+      const Lh = h1 + h2;
+      const bvcS = pviS - h1;
+      const evcS = pviS + h2;
+      const bvcE = pviE - gIn * h1;
+      const evcE = pviE + gOut * h2;
+      const A = (gOut - gIn) * 100; // percent
+      const K = Lh / A;
+      elements.push({ type: 'PARABOLA', station: bvcS, elev: bvcE, K, gIn, gOut, L: Lh, pviStation: pviS, pviElev: pviE, circular, radius: R, fileLength: L });
+      elements.push({ type: 'STRAIGHT', station: evcS, elev: evcE, pvi: null });
+    }
+    elements.push({ type: 'EOP', station: pvis[n - 1].station, elev: pvis[n - 1].elev, pvi: null });
+    return elements;
+  }
+
+  // Evaluate elevation at an arbitrary station given the vertical elements list
+  // Exact circular vertical curve elevation (no small-angle approximation) --
+  // needed because at very steep grades (seen in some test/edge-case
+  // profiles, 40%+) the standard parabola quadratic measurably diverges
+  // from a true circular arc of the same endpoints (confirmed up to ~0.47 m
+  // at 40-50% grades on a 40 m curve). At ordinary road grades (a few
+  // percent) this returns effectively the same result as the parabola.
+  // L and x are HORIZONTAL distances (stations). For a circle of radius R
+  // parametrised by horizontal distance, sin(theta) grows linearly:
+  // sin(theta_x) = sin(theta1) + x/R, so 1/R = (sin th2 - sin th1)/L.
+  // (Using (th2-th1)/L here -- curvature per ARC length -- made the curve
+  // miss gOut and the EVC elevation, ~0.4 m at 40% grades.)
+  function circularVerticalElev(y0, gIn, gOut, L, x) {
+    const th1 = Math.atan(gIn), th2 = Math.atan(gOut);
+    const kappa = (Math.sin(th2) - Math.sin(th1)) / L;
+    if (Math.abs(kappa) < 1e-12) return y0 + gIn * x;
+    const arg = Math.max(-1, Math.min(1, x * kappa + Math.sin(th1)));
+    const thx = Math.asin(arg);
+    return y0 + (Math.cos(th1) - Math.cos(thx)) / kappa;
+  }
+
+  function evalVertical(elements, s) {
+    for (let i = 0; i < elements.length; i++) {
+      const e = elements[i];
+      if (e.type === 'PARABOLA') {
+        const evc = e.station + e.L;
+        if (s >= e.station - 1e-6 && s <= evc + 1e-6) {
+          const x = s - e.station;
+          if (e.circular) return circularVerticalElev(e.elev, e.gIn, e.gOut, e.L, x);
+          const r = (e.gOut - e.gIn) / (2 * e.L);
+          return e.elev + e.gIn * x + r * x * x;
+        }
+      }
+    }
+    // else: linear between surrounding STRAIGHT/PARABOLA-endpoints
+    const knots = [];
+    for (const e of elements) {
+      if (e.type === 'STRAIGHT' || e.type === 'EOP') knots.push({ station: e.station, elev: e.elev });
+      if (e.type === 'PARABOLA') knots.push({ station: e.station, elev: e.elev });
+    }
+    knots.sort((a, b) => a.station - b.station);
+    for (let i = 0; i < knots.length - 1; i++) {
+      if (s >= knots[i].station - 1e-6 && s <= knots[i + 1].station + 1e-6) {
+        const t = (s - knots[i].station) / (knots[i + 1].station - knots[i].station);
+        return knots[i].elev + t * (knots[i + 1].elev - knots[i].elev);
+      }
+    }
+    if (knots.length) return s < knots[0].station ? knots[0].elev : knots[knots.length - 1].elev;
+    return 0;
+  }
+
+  // ============================================================
+  // HORIZONTAL GEOMETRY (PI list -> STRAIGHT/CURVE/EOP elements)
+  //  Circular-equivalent model (validated: matches real Netcad
+  //  ALN field export to within ~0.1-0.5 m on a real project).
+  //  Spiral lengths (Ls1/Ls2) are carried through for reference /
+  //  future exact-clothoid refinement but are NOT applied to the
+  //  field chainage, matching what Netcad itself outputs to GSI.
+  // ============================================================
+  // Companion sanity check for the raw PI list (same purpose as
+  // sanityCheckPvis, but for $YATAY): catches an obviously mis-read R or
+  // Ls1/Ls2 before it can silently distort the geometry.
+  function sanityCheckPis(pis) {
+    const warnings = [];
+    for (let i = 1; i < pis.length - 1; i++) {
+      const R = pis[i].R;
+      if (R == null || isNaN(R)) continue;
+      if (R < 0) {
+        warnings.push(`PI "${pis[i].name}": yarıçap (R) negatif (${R}) — $YATAY sütunları yanlış okunmuş olabilir.`);
+        continue;
+      }
+      const dPrev = dist(pis[i - 1], pis[i]);
+      const dNext = dist(pis[i], pis[i + 1]);
+      const shorter = Math.min(dPrev, dNext);
+      const Ls1 = pis[i].Ls1 || 0, Ls2 = pis[i].Ls2 || 0;
+      if (Math.max(Ls1, Ls2) > shorter && shorter > 0) {
+        warnings.push(`PI "${pis[i].name}": geçiş eğrisi uzunluğu (Ls) komşu nokta mesafesine göre aşırı büyük `
+          + `(Ls1=${Ls1}, Ls2=${Ls2}, komşu mesafe ${shorter.toFixed(1)} m) — sütun okuması hatalı olabilir.`);
+      }
+      // The two spirals together turn (Ls1+Ls2)/(2R); if that reaches the
+      // total deflection there is no circular arc left (negative Lc).
+      const ad = Math.abs(normDelta(az(pis[i], pis[i + 1]) - az(pis[i - 1], pis[i])));
+      if (R > 0 && (Ls1 > 0 || Ls2 > 0) && (Ls1 + Ls2) / (2 * R) >= ad) {
+        warnings.push(`PI "${pis[i].name}": geçiş eğrileri (Ls1=${Ls1}, Ls2=${Ls2}) sapma açısına göre çok uzun, `
+          + `dairesel yay kalmıyor. Klotoid çıktısında bu kurp daire olarak işlenecek.`);
+      }
+    }
+    return warnings;
+  }
+
+  function computeHorizontal(pis) {
+    const n = pis.length;
+    if (n < 2) return { elements: [], curves: [] };
+
+    let piStationPrev = 0;
+    let prevL = 0, prevT = 0;
+    const curves = [];
+
+    for (let i = 1; i < n - 1; i++) {
+      const R = pis[i].R;
+      const az_in = az(pis[i - 1], pis[i]);
+      const az_out = az(pis[i], pis[i + 1]);
+      const delta = normDelta(az_out - az_in);
+      const ad = Math.abs(delta);
+      let T = 0, L = 0;
+      if (R && Math.abs(R) > 1e-6 && ad > 1e-9) {
+        T = Math.abs(R) * Math.tan(ad / 2);
+        L = Math.abs(R) * ad;
+      }
+      const d = dist(pis[i - 1], pis[i]);
+      const piStation = piStationPrev + d + (prevL - 2 * prevT);
+
+      curves.push({
+        idx: i, name: pis[i].name, R: Math.abs(R), sign: delta >= 0 ? 1 : -1,
+        deltaDeg: ad * 180 / Math.PI, T, L, az_in, az_out, piStation,
+        pcStation: piStation - T, ptStation: piStation - T + L,
+        Ls1: pis[i].Ls1, Ls2: pis[i].Ls2,
+      });
+      piStationPrev = piStation;
+      prevL = L; prevT = T;
+    }
+    // final pseudo-station of the last named point (PS)
+    const lastIdx = n - 1;
+    const dEnd = dist(pis[lastIdx - 1], pis[lastIdx]);
+    const psStation = piStationPrev + dEnd + (prevL - 2 * prevT);
+
+    // build element list
+    const elements = [];
+    elements.push({ type: 'STRAIGHT', station: 0, E: pis[0].E, N: pis[0].N });
+    for (const c of curves) {
+      if (!c.R || c.R < 1e-6 || !c.L || c.L < 1e-6) {
+        // No curve at this PI. If the alignment really bends here (R=0
+        // corner) the PI itself must stay as a knot, otherwise the line is
+        // drawn/staked straight from the previous point to the next one,
+        // cutting the corner. A truly collinear PI needs no record.
+        if (c.deltaDeg > 1e-7) elements.push({ type: 'STRAIGHT', station: c.piStation, E: pis[c.idx].E, N: pis[c.idx].N });
+        continue;
+      }
+      const pcE = pis[c.idx].E - c.T * Math.sin(c.az_in);
+      const pcN = pis[c.idx].N - c.T * Math.cos(c.az_in);
+      const ptCoordE = pis[c.idx].E + c.T * Math.sin(c.az_out);
+      const ptCoordN = pis[c.idx].N + c.T * Math.cos(c.az_out);
+      elements.push({ type: 'CURVE', station: c.pcStation, E: pcE, N: pcN, radius: c.R * c.sign, curveRef: c });
+      elements.push({ type: 'STRAIGHT', station: c.ptStation, E: ptCoordE, N: ptCoordN });
+    }
+    elements.push({ type: 'EOP', station: psStation, E: pis[lastIdx].E, N: pis[lastIdx].N });
+
+    return { elements, curves, psStation };
+  }
+
+  // Companion to computeHorizontal: when a PI carries a symmetric spiral
+  // (Ls1===Ls2>0, e.g. from a KTB $GECIS section), build the FULL
+  // STRAIGHT/SPIRAL/CURVE/SPIRAL/STRAIGHT breakdown instead of collapsing
+  // straight to a single circular arc -- this is only used for the general
+  // geometry (plan view, cross-section/mesh positioning), never for GSI
+  // ALN/PRF export, which must keep using computeHorizontal's plain
+  // circular-equivalent output (that is what real total-station/GNSS field
+  // format actually expects, validated separately). A PI without usable
+  // spiral data (Ls1=0, or Ls1!==Ls2) falls back to the same pure-circular
+  // treatment as computeHorizontal, so the two never disagree on stations
+  // for curves that don't have real spiral data behind them.
+  function computeHorizontalExact(pis) {
+    const n = pis.length;
+    if (n < 2) return [];
+    let piStationPrev = 0, prevL = 0, prevT = 0;
+    const elements = [{ type: 'STRAIGHT', station: 0, E: pis[0].E, N: pis[0].N }];
+
+    for (let i = 1; i < n - 1; i++) {
+      const R = pis[i].R;
+      const az_in = az(pis[i - 1], pis[i]);
+      const az_out = az(pis[i], pis[i + 1]);
+      const delta = normDelta(az_out - az_in);
+      const sign = delta >= 0 ? 1 : -1;
+      const ad = Math.abs(delta);
+      const Ls1 = pis[i].Ls1 || 0, Ls2 = pis[i].Ls2 || 0;
+      // the two spirals turn Ls1/R in total -- they must leave a positive
+      // circular arc (deltaC = ad - Ls1/R > 0), else fall back to a circle
+      const symmetric = R && Math.abs(R) > 1e-6 && Ls1 > 0 && Math.abs(Ls1 - Ls2) < 1e-3 && ad > 1e-9 && ad > Ls1 / Math.abs(R);
+      const d = dist(pis[i - 1], pis[i]);
+
+      if (symmetric) {
+        const Rabs = Math.abs(R);
+        const { th, p, k } = spiralPK(Ls1, Rabs);
+        const T = (Rabs + p) * Math.tan(ad / 2) + k;
+        const deltaC = ad - 2 * th;
+        const Lc = Rabs * deltaC;
+        const Ltotal = Ls1 + Lc + Ls2;
+        const piStation = piStationPrev + d + (prevL - 2 * prevT);
+        const TSsta = piStation - T;
+
+        const TS = { E: pis[i].E - T * Math.sin(az_in), N: pis[i].N - T * Math.cos(az_in) };
+        const ST = { E: pis[i].E + T * Math.sin(az_out), N: pis[i].N + T * Math.cos(az_out) };
+        const SC = {
+          E: TS.E + X_of(Ls1, th) * Math.sin(az_in) + Y_of(Ls1, th) * Math.sin(az_in + sign * Math.PI / 2),
+          N: TS.N + X_of(Ls1, th) * Math.cos(az_in) + Y_of(Ls1, th) * Math.cos(az_in + sign * Math.PI / 2),
+        };
+        const CS = {
+          E: ST.E - X_of(Ls2, th) * Math.sin(az_out) + Y_of(Ls2, th) * Math.sin(az_out + sign * Math.PI / 2),
+          N: ST.N - X_of(Ls2, th) * Math.cos(az_out) + Y_of(Ls2, th) * Math.cos(az_out + sign * Math.PI / 2),
+        };
+        elements.push({ type: 'SPIRAL', station: TSsta, E: TS.E, N: TS.N, endE: SC.E, endN: SC.N, length: Ls1, radius: Rabs, sign, entry: true });
+        elements.push({ type: 'CURVE', station: TSsta + Ls1, E: SC.E, N: SC.N, radius: Rabs * sign, length: Lc });
+        elements.push({ type: 'SPIRAL', station: TSsta + Ls1 + Lc, E: CS.E, N: CS.N, endE: ST.E, endN: ST.N, length: Ls2, radius: Rabs, sign, entry: false });
+        elements.push({ type: 'STRAIGHT', station: TSsta + Ltotal, E: ST.E, N: ST.N });
+
+        piStationPrev = piStation; prevL = Ltotal; prevT = T;
+      } else {
+        let T = 0, L = 0;
+        if (R && Math.abs(R) > 1e-6 && ad > 1e-9) { T = Math.abs(R) * ad > 0 ? Math.abs(R) * Math.tan(ad / 2) : 0; L = Math.abs(R) * ad; }
+        const piStation = piStationPrev + d + (prevL - 2 * prevT);
+        if (T > 1e-9 && L > 1e-9) {
+          const pcE = pis[i].E - T * Math.sin(az_in), pcN = pis[i].N - T * Math.cos(az_in);
+          const ptE = pis[i].E + T * Math.sin(az_out), ptN = pis[i].N + T * Math.cos(az_out);
+          elements.push({ type: 'CURVE', station: piStation - T, E: pcE, N: pcN, radius: Math.abs(R) * sign, length: L });
+          elements.push({ type: 'STRAIGHT', station: piStation - T + L, E: ptE, N: ptN });
+        } else if (ad > 1e-9) {
+          // R=0 corner: keep the PI as a knot (see computeHorizontal)
+          elements.push({ type: 'STRAIGHT', station: piStation, E: pis[i].E, N: pis[i].N });
+        }
+        piStationPrev = piStation; prevL = L; prevT = T;
+      }
+    }
+    const lastIdx = n - 1;
+    const dEnd = dist(pis[lastIdx - 1], pis[lastIdx]);
+    const psStation = piStationPrev + dEnd + (prevL - 2 * prevT);
+    elements.push({ type: 'EOP', station: psStation, E: pis[lastIdx].E, N: pis[lastIdx].N });
+    return elements;
+  }
+
+  // Evaluate coordinate at arbitrary station
+  // Position at arc-length `ell` (0..Ls) into a clothoid whose curvature
+  // grows linearly from 0 to 1/R over its full length Ls, in a LOCAL frame
+  // aligned with the tangent at ell=0 (x = along that tangent, y =
+  // perpendicular). Standard 4th-order clothoid series -- the same one
+  // already used elsewhere (X_of/p_perp) for a spiral's END point, just
+  // generalised to an arbitrary intermediate arc-length.
+  function spiralLocalPoint(ell, Ls, R) {
+    if (Ls <= 0 || !R) return { x: ell, y: 0 };
+    const th = (ell * ell) / (2 * R * Ls);
+    const x = ell * (1 - th * th / 10 + th ** 4 / 216);
+    const y = ell * (th / 3 - th ** 3 / 42 + th ** 5 / 1320);
+    return { x, y };
+  }
+
+  // The tangent direction at the START of elements[i] cannot always be
+  // read off as the straight chord to the previous element -- that is
+  // only true when the previous element is itself a STRAIGHT (chord =
+  // tangent for a straight line). When the previous element is a CURVE or
+  // SPIRAL, the path bends between the two points, so the chord direction
+  // is systematically wrong (it under/over-rotates by however much the
+  // previous element itself turned). This chains backward through any
+  // number of consecutive curved elements to the nearest straight
+  // reference and adds up each one's own turn to get the true tangent.
+  // Start direction of a CURVE: an explicit `dirIn` (set when a clip starts
+  // mid-curve), the KTB engine's own az_in, or derived from the list.
+  function curveDirIn(elements, i) {
+    const e = elements[i];
+    if (e.dirIn != null) return e.dirIn;
+    if (e.curveRef) return e.curveRef.az_in;
+    return tangentDirAtStart(elements, i);
+  }
+
+  function tangentDirAtStart(elements, i) {
+    const prev = elements[i - 1];
+    if (!prev) return 0;
+    if (prev.type === 'CURVE') {
+      const R = Math.abs(prev.radius), sign = prev.radius >= 0 ? 1 : -1;
+      // actual arc length up to this element (a clipped curve can be
+      // shorter than its curveRef.L)
+      const len = elements[i].station - prev.station;
+      const delta = R > 0 && len > 0 ? len / R : 0;
+      return curveDirIn(elements, i - 1) + sign * delta;
+    }
+    if (prev.type === 'SPIRAL') {
+      const theta = prev.radius > 0 ? prev.length / (2 * prev.radius) : 0;
+      return tangentDirAtStart(elements, i - 1) + prev.sign * theta;
+    }
+    return az(prev, elements[i]);
+  }
+
+  function evalHorizontal(elements, s) {
+    for (let i = 0; i < elements.length; i++) {
+      const e = elements[i];
+      if (e.type === 'SPIRAL') {
+        const next = elements[i + 1];
+        const prev = elements[i - 1];
+        if (!next || !prev || !e.radius) continue;
+        if (s >= e.station - 1e-6 && s <= next.station + 1e-6) {
+          const totalTheta = e.length / (2 * e.radius);
+          if (e.entry) {
+            // curvature increases from the start: parametrise forward
+            const dirIn = tangentDirAtStart(elements, i);
+            const ell = s - e.station;
+            const p = spiralLocalPoint(ell, e.length, e.radius);
+            return {
+              E: e.E + p.x * Math.sin(dirIn) + p.y * Math.sin(dirIn + e.sign * Math.PI / 2),
+              N: e.N + p.x * Math.cos(dirIn) + p.y * Math.cos(dirIn + e.sign * Math.PI / 2),
+            };
+          } else {
+            // exit spiral: curvature decreases to 0 at its end -- that end
+            // is a mirror image of an entry spiral, so parametrise
+            // BACKWARD from the known end point/direction instead.
+            const dirIn = tangentDirAtStart(elements, i);
+            const dirAtEnd = dirIn + e.sign * totalTheta;
+            const ellFromEnd = next.station - s;
+            const p = spiralLocalPoint(ellFromEnd, e.length, e.radius);
+            const backDir = dirAtEnd + Math.PI;
+            return {
+              E: next.E + p.x * Math.sin(backDir) + p.y * Math.sin(backDir - e.sign * Math.PI / 2),
+              N: next.N + p.x * Math.cos(backDir) + p.y * Math.cos(backDir - e.sign * Math.PI / 2),
+            };
+          }
+        }
+      }
+      if (e.type === 'CURVE') {
+        // Work uniformly whether this element came from the KTB PI engine
+        // (which attaches a rich `curveRef`) or straight from a parsed
+        // LandXML <Curve> (which only has station/E/N/radius/length) --
+        // derive whatever is missing from the element list itself instead
+        // of requiring curveRef.
+        const R = Math.abs(e.radius);
+        const sign = e.radius >= 0 ? 1 : -1;
+        const next = elements[i + 1];
+        const prev = elements[i - 1];
+        if (!next || (!prev && e.dirIn == null) || !R) continue;
+        const ptStation = e.curveRef ? e.curveRef.ptStation : next.station;
+        if (s >= e.station - 1e-6 && s <= ptStation + 1e-6) {
+          const arcLen = s - e.station;
+          const dirIn = curveDirIn(elements, i);
+          // circle center is offset from PC perpendicular to the incoming tangent,
+          // toward the inside of the turn (sign: +1 = turning right/clockwise, -1 = left)
+          const cx = e.E + R * Math.sin(dirIn + sign * Math.PI / 2);
+          const cy = e.N + R * Math.cos(dirIn + sign * Math.PI / 2);
+          const a0 = Math.atan2(e.E - cx, e.N - cy);
+          const ang = a0 + sign * (arcLen / R);
+          return { E: cx + R * Math.sin(ang), N: cy + R * Math.cos(ang) };
+        }
+      }
+    }
+    // linear interpolation among knot points. NOTE: a CURVE element's own
+    // (station,E,N) is its PC point, i.e. exactly where the incoming tangent
+    // ends -- so it is a valid straight-line boundary too and must stay in
+    // this list (excluding it caused wrong interpolation across a whole
+    // curve when the query station falls just before that curve's PC).
+    const knots = elements;
+    for (let i = 0; i < knots.length - 1; i++) {
+      if (s >= knots[i].station - 1e-6 && s <= knots[i + 1].station + 1e-6) {
+        const t = (s - knots[i].station) / (knots[i + 1].station - knots[i].station || 1);
+        return { E: knots[i].E + t * (knots[i + 1].E - knots[i].E), N: knots[i].N + t * (knots[i + 1].N - knots[i].N) };
+      }
+    }
+    if (knots.length) {
+      const k = s < knots[0].station ? knots[0] : knots[knots.length - 1];
+      return { E: k.E, N: k.N };
+    }
+    return { E: 0, N: 0 };
+  }
+
+  // Tangent direction (azimuth, radians) of the centerline at station s --
+  // needed to turn a cross-section's (offset, elevation) pair into a real
+  // (N, E, Z) ground point: the offset is measured perpendicular to this
+  // direction, positive = right of the direction of increasing chainage.
+  function evalHorizontalDir(elements, s) {
+    for (let i = 0; i < elements.length; i++) {
+      const e = elements[i];
+      if (e.type === 'SPIRAL') {
+        const next = elements[i + 1], prev = elements[i - 1];
+        if (!next || !prev || !e.radius) continue;
+        if (s >= e.station - 1e-6 && s <= next.station + 1e-6) {
+          const totalTheta = e.length / (2 * e.radius);
+          const dirIn = tangentDirAtStart(elements, i);
+          if (e.entry) {
+            const ell = s - e.station;
+            const th = (ell * ell) / (2 * e.radius * e.length);
+            return dirIn + e.sign * th;
+          } else {
+            const dirAtEnd = dirIn + e.sign * totalTheta;
+            const ellFromEnd = next.station - s;
+            const th = (ellFromEnd * ellFromEnd) / (2 * e.radius * e.length);
+            return dirAtEnd - e.sign * th;
+          }
+        }
+      }
+      if (e.type === 'CURVE') {
+        const R = Math.abs(e.radius);
+        const sign = e.radius >= 0 ? 1 : -1;
+        const next = elements[i + 1], prev = elements[i - 1];
+        if (!next || (!prev && e.dirIn == null) || !R) continue;
+        const ptStation = e.curveRef ? e.curveRef.ptStation : next.station;
+        if (s >= e.station - 1e-6 && s <= ptStation + 1e-6) {
+          const arcLen = s - e.station;
+          const dirIn = curveDirIn(elements, i);
+          return dirIn + sign * (arcLen / R);
+        }
+      }
+    }
+    const knots = elements;
+    for (let i = 0; i < knots.length - 1; i++) {
+      if (s >= knots[i].station - 1e-6 && s <= knots[i + 1].station + 1e-6) return az(knots[i], knots[i + 1]);
+    }
+    if (knots.length >= 2) return az(knots[knots.length - 2], knots[knots.length - 1]);
+    return 0;
+  }
+
+  // Explicit curve entry/exit (PC/PT) summary -- works uniformly whether
+  // the elements came from the KTB PI engine or from a parsed LandXML
+  // (no dependency on curveRef, same reasoning as evalHorizontal/Dir):
+  // a CURVE element's own station/E/N IS its PC (entry), and the very
+  // next element's station/E/N IS its PT (exit), by construction.
+  function summarizeCurves(elements) {
+    const out = [];
+    for (let i = 0; i < elements.length; i++) {
+      const e = elements[i];
+      if (e.type !== 'CURVE') continue;
+      const next = elements[i + 1];
+      if (!next) continue;
+      const R = Math.abs(e.radius);
+      const sign = e.radius >= 0 ? 1 : -1;
+      const arcLength = next.station - e.station; // pure circular-arc length (SC to CS)
+      const deltaDeg = R > 0 ? (arcLength / R) * 180 / Math.PI : 0;
+      const prevEl = elements[i - 1];
+      const hasEntrySpiral = prevEl && prevEl.type === 'SPIRAL';
+      const hasExitSpiral = next.type === 'SPIRAL';
+      const Ls1 = hasEntrySpiral ? prevEl.length : 0;
+      const Ls2 = hasExitSpiral ? next.length : 0;
+      // "Giriş/Çıkış" (entry/exit) = TS/ST when spirals are present -- the
+      // true start/end of the whole transition, not just the circular
+      // portion's own SC/CS -- since that is what "kurp giriş/çıkışı"
+      // means for a real transitioned curve.
+      const tsStation = hasEntrySpiral ? prevEl.station : e.station;
+      const tsE = hasEntrySpiral ? prevEl.E : e.E, tsN = hasEntrySpiral ? prevEl.N : e.N;
+      const stStation = hasExitSpiral ? next.station + next.length : next.station;
+      const stE = hasExitSpiral ? next.endE : next.E, stN = hasExitSpiral ? next.endN : next.N;
+      out.push({
+        pcStation: tsStation, ptStation: stStation,
+        scStation: e.station, csStation: next.station,
+        pcE: tsE, pcN: tsN, ptE: stE, ptN: stN,
+        radius: R, sign, length: stStation - tsStation, arcLength, deltaDeg, Ls1, Ls2,
+      });
+    }
+    return out;
+  }
+
+  // Convert KSP-style cross sections (station + list of {offset, elev, label})
+  // into real-world (N, E, Z) breaklines -- one continuous line per label,
+  // split wherever that label is missing for a stretch (a genuine gap, e.g.
+  // a retaining wall that only exists over part of the route) rather than
+  // relying on the receiving device to do the offset->3D projection itself.
+  // Median spacing between consecutive cross-section stations, used to size
+  // the "real gap" threshold adaptively instead of assuming a fixed
+  // interval -- different projects export KSP/KSE at different intervals
+  // (5 m, 10 m, 20 m, ...), so a hard-coded value would either bridge real
+  // gaps or split perfectly continuous stations depending on the project.
+  function estimateStationStep(crossSections) {
+    const stations = [...new Set(crossSections.map(x => x.station))].sort((a, b) => a - b);
+    if (stations.length < 2) return 10;
+    const steps = [];
+    for (let i = 1; i < stations.length; i++) steps.push(stations[i] - stations[i - 1]);
+    steps.sort((a, b) => a - b);
+    return steps[Math.floor(steps.length / 2)] || 10;
+  }
+
+  // A KSP/KSE point code can repeat within one cross-section with a
+  // leading "N," disambiguator (seen in real Netcad exports, e.g. several
+  // wall points all coded "HDA" but written "3,HDA", "4,HDA", ...). For
+  // matching the SAME physical string across stations this leading index
+  // is noise -- what matters is the base code and its position among
+  // same-code points at that station (1st HDA point matches the 1st HDA
+  // point at the next station, 2nd matches 2nd, etc). Plain single-
+  // occurrence codes (the overwhelming majority: EKS, SA, KDA, ...) are
+  // untouched by this -- they just get occurrence index 0 everywhere.
+  // The side of the axis is part of the key as well: the same code usually
+  // exists on both sides (SA, SEV, ...) and a point missing on the left
+  // must not let the right-hand point take its place (that would join a
+  // line diagonally across the road). Within a code+side, points are
+  // numbered outward from the axis.
+  function assignMatchKeys(pts) {
+    const side = o => (o < -1e-3 ? 'sol' : o > 1e-3 ? 'sağ' : 'eks');
+    const order = pts.map((p, i) => i).sort((i, j) => Math.abs(pts[i].offset) - Math.abs(pts[j].offset));
+    const counts = {}, keys = [];
+    for (const i of order) {
+      const p = pts[i];
+      const base = (p.label || '').replace(/^\d+,/, '').trim() || '(kodsuz)';
+      const k = base + ' (' + side(p.offset) + ')';
+      const occ = counts[k] = (counts[k] || 0) + 1;
+      keys[i] = occ > 1 ? `${k} ${occ}` : k;
+    }
+    return pts.map((p, i) => ({ ...p, matchKey: keys[i] }));
+  }
+
+  // A single cross-section's raw point list (in KSP file order) can
+  // actually contain MORE THAN ONE physical profile bundled together --
+  // confirmed on real data: e.g. a small ditch/gutter detail plus the main
+  // platform template, both exported through the same station block. The
+  // tell-tale signs are (a) the offset direction reversing partway through
+  // the list, or (b) two points sharing the exact same offset (a seam
+  // between two templates that both reference the centerline). Splitting
+  // there stops these being connected as if they were one continuous
+  // transect -- which otherwise produces a spurious zero-width "vertical"
+  // segment right at the seam.
+  function splitIntoSubProfiles(points) {
+    if (points.length < 2) return [points.slice()];
+    const groups = [];
+    let cur = [points[0]];
+    let dir = 0;
+    for (let i = 1; i < points.length; i++) {
+      const d = points[i].offset - points[i - 1].offset;
+      const isSeam = Math.abs(d) < 0.01;
+      const newDir = d > 1e-6 ? 1 : d < -1e-6 ? -1 : dir;
+      const reversal = dir !== 0 && newDir !== 0 && newDir !== dir;
+      if (isSeam || reversal) { groups.push(cur); cur = []; }
+      cur.push(points[i]);
+      if (!isSeam) dir = newDir;
+    }
+    groups.push(cur);
+    return groups;
+  }
+
+  function buildCrossSectionBreaklines(crossSections, horizontalElements, maxGap) {
+    maxGap = maxGap || estimateStationStep(crossSections) * 2.5;
+    const byKey = {};
+    for (const xs of crossSections) {
+      const center = evalHorizontal(horizontalElements, xs.station);
+      const dir = evalHorizontalDir(horizontalElements, xs.station);
+      const perpE = Math.sin(dir + Math.PI / 2), perpN = Math.cos(dir + Math.PI / 2);
+      const withKeys = assignMatchKeys(xs.points);
+      for (const p of withKeys) {
+        (byKey[p.matchKey] = byKey[p.matchKey] || []).push({
+          station: xs.station,
+          E: center.E + p.offset * perpE,
+          N: center.N + p.offset * perpN,
+          Z: p.elev,
+        });
+      }
+    }
+    const breaklines = [];
+    for (const key in byKey) {
+      const pts = byKey[key].sort((a, b) => a.station - b.station);
+      let cur = [pts[0]];
+      for (let i = 1; i < pts.length; i++) {
+        if (pts[i].station - pts[i - 1].station > maxGap) {
+          if (cur.length >= 2) breaklines.push({ name: key, points: cur });
+          cur = [];
+        }
+        cur.push(pts[i]);
+      }
+      if (cur.length >= 2) breaklines.push({ name: key, points: cur });
+    }
+    return breaklines;
+  }
+
+  // Triangulate the road surface between consecutive cross sections into a
+  // real TIN (points + 3-point faces) for embedding as a proper LandXML
+  // <Definition surfType="TIN">. Between station i and i+1, points are
+  // matched by their KSP label (the same physical string -- centerline,
+  // shoulder, ditch, wall top, etc.) so two "ladder" triangles are formed
+  // per matching pair of adjacent labels; a label missing on one side
+  // (e.g. a retaining wall that hasn't started/has ended) simply isn't
+  // bridged there, leaving a natural gap instead of a false triangle.
+  function buildCrossSectionMesh(crossSections, horizontalElements, maxGap) {
+    maxGap = maxGap || estimateStationStep(crossSections) * 2.5;
+    const points = [];
+    let nextId = 1;
+    const stationData = crossSections
+      .slice()
+      .sort((a, b) => a.station - b.station)
+      .map(xs => {
+        const center = evalHorizontal(horizontalElements, xs.station);
+        const dir = evalHorizontalDir(horizontalElements, xs.station);
+        const perpE = Math.sin(dir + Math.PI / 2), perpN = Math.cos(dir + Math.PI / 2);
+        const pts = [];
+        splitIntoSubProfiles(xs.points).forEach((group, groupIdx) => {
+          const sorted = [...group].sort((a, b) => a.offset - b.offset);
+          const withKeys = assignMatchKeys(sorted);
+          for (const p of withKeys) {
+            const id = nextId++;
+            points.push({ id, N: center.N + p.offset * perpN, E: center.E + p.offset * perpE, Z: p.elev });
+            pts.push({ id, matchKey: p.matchKey, group: groupIdx });
+          }
+        });
+        return { station: xs.station, pts };
+      });
+
+    const faces = [];
+    for (let i = 0; i < stationData.length - 1; i++) {
+      const A = stationData[i], B = stationData[i + 1];
+      if (B.station - A.station > maxGap) continue;
+      const bMap = {};
+      for (const p of B.pts) bMap[p.matchKey] = p;
+      const common = A.pts.filter(p => bMap[p.matchKey]);
+      for (let k = 0; k < common.length - 1; k++) {
+        if (common[k].group !== common[k + 1].group) continue; // never bridge across a sub-profile seam
+        const a1 = common[k], a2 = common[k + 1];
+        const b1 = bMap[a1.matchKey], b2 = bMap[a2.matchKey];
+        faces.push([a1.id, a2.id, b1.id]);
+        faces.push([a2.id, b2.id, b1.id]);
+      }
+    }
+    return { points, faces };
+  }
+
+  // ============================================================
+  // Clip a set of horizontal/vertical elements to [sStart, sEnd]
+  // ============================================================
+  // drop near-duplicate knots (e.g. the leftover tail of a curve whose PC/PT
+  // sits within `tol` metres of a newly-inserted clip boundary)
+  // `tol` only trims the two records the clip itself INSERTS (range start
+  // and EOP) when a real element lies within `tol` of them -- it must never
+  // delete a real element: a grade break / corner / PT closer than `tol` to
+  // its neighbour is still real geometry (dropping such knots used to shift
+  // elevations and positions). list = [clipStart, ...real, clipEnd].
+  function dedupeByStation(list, tol) {
+    const PROTECTED = new Set(['CURVE', 'PARABOLA', 'SPIRAL']);
+    const out = list.slice();
+    // start: a plain straight start record followed closely by a real element
+    if (out.length > 2 && out[0].type === 'STRAIGHT' && out[1].station - out[0].station < tol) out.shift();
+    // end: a real plain knot just before the EOP becomes the EOP itself
+    const n = out.length;
+    if (n > 2) {
+      const prev = out[n - 2];
+      if (out[n - 1].station - prev.station < tol && !PROTECTED.has(prev.type)) {
+        out.splice(n - 2, 2, { ...prev, type: 'EOP' });
+      }
+    }
+    return out;
+  }
+
+
+  // Station at which each element ends (next element's station).
+  function findSpanning(elements, s, type) {
+    for (let i = 0; i < elements.length - 1; i++) {
+      const e = elements[i];
+      if (e.type !== type) continue;
+      const end = type === 'PARABOLA' ? e.station + e.L : elements[i + 1].station;
+      if (s > e.station + 1e-6 && s < end - 1e-6) return i;
+    }
+    return -1;
+  }
+  function clipHorizontal(elements, sStart, sEnd, tol) {
+    tol = tol == null ? 1.0 : tol;
+    // IMPORTANT: the merge tolerance (tol, user-configurable, ~1 m by
+    // default) must NOT be used to decide what counts as "inside the
+    // clip range" -- a real curve sitting less than `tol` metres past
+    // sStart/before sEnd would otherwise be filtered out entirely before
+    // dedupeByStation even runs, silently deleting it from the output.
+    // Only an exact/near-exact floating point duplicate at the boundary
+    // should be excluded here; everything else is left for dedupe.
+    const eps = 1e-6;
+    const startPt = evalHorizontal(elements, sStart);
+    const endPt = evalHorizontal(elements, sEnd);
+    const kept = elements.filter(e => e.station > sStart + eps && e.station < sEnd - eps);
+    // If sStart falls INSIDE a curve, the first record must be that same
+    // curve (radius + tangent direction at sStart), not a STRAIGHT --
+    // otherwise the rest of the arc up to its PT is written/staked as a
+    // straight line.
+    let first = { type: 'STRAIGHT', station: sStart, E: startPt.E, N: startPt.N };
+    const ci = findSpanning(elements, sStart, 'CURVE');
+    if (ci >= 0) {
+      first = { type: 'CURVE', station: sStart, E: startPt.E, N: startPt.N, radius: elements[ci].radius,
+        length: elements[ci + 1].station - sStart, dirIn: evalHorizontalDir(elements, sStart) };
+    }
+    const out = [first, ...kept];
+    out.push({ type: 'EOP', station: sEnd, E: endPt.E, N: endPt.N });
+    return dedupeByStation(out, tol);
+  }
+  function clipVertical(elements, sStart, sEnd, tol) {
+    tol = tol == null ? 1.0 : tol;
+    // Same fix as clipHorizontal: don't let the merge tolerance filter out
+    // a real rakor (PARABOLA) that happens to sit close to the clip
+    // boundary -- only exclude true floating-point duplicates here.
+    const eps = 1e-6;
+    const startE = evalVertical(elements, sStart);
+    const endE = evalVertical(elements, sEnd);
+    const kept = elements.filter(e => e.station > sStart + eps && e.station < sEnd - eps);
+    // sStart inside a rakor: start with the REMAINING part of that curve
+    // (same K, grade at sStart as gIn) instead of a straight grade.
+    let first = { type: 'STRAIGHT', station: sStart, elev: startE };
+    const pi = findSpanning(elements, sStart, 'PARABOLA');
+    if (pi >= 0) {
+      const p = elements[pi];
+      const x = sStart - p.station;
+      let gx = p.gIn + (p.gOut - p.gIn) * x / p.L;
+      if (p.circular) {
+        const k = (Math.sin(Math.atan(p.gOut)) - Math.sin(Math.atan(p.gIn))) / p.L;
+        gx = Math.tan(Math.asin(Math.max(-1, Math.min(1, Math.sin(Math.atan(p.gIn)) + k * x))));
+      }
+      first = { ...p, station: sStart, elev: startE, gIn: gx, L: p.L - x };
+    }
+    const out = [first, ...kept];
+    out.push({ type: 'EOP', station: sEnd, elev: endE });
+    return dedupeByStation(out, tol);
+  }
+
+  // ============================================================
+  // GSI-16 WRITER
+  // ============================================================
+  function gsiWord(wi, info, sign, rawStr) {
+    return wi + info + sign + String(rawStr).padStart(16, '0');
+  }
+  function gsiNumWord(wi, info, valueMeters) {
+    const scaled = Math.round(valueMeters * 1000);
+    const sign = scaled < 0 ? '-' : '+';
+    return gsiWord(wi, info, sign, Math.abs(scaled));
+  }
+  function gsiTxtWord(wi, info, text) {
+    // a GSI-16 word holds at most 16 characters -- longer text would
+    // shift every following fixed-width field
+    return gsiWord(wi, info, '+', String(text).toUpperCase().slice(0, 16));
+  }
+  function gsiScaledWord(wi, info, value, scale) {
+    const scaled = Math.round(value * scale);
+    const sign = scaled < 0 ? '-' : '+';
+    return gsiWord(wi, info, sign, Math.abs(scaled));
+  }
+
+  function writeALN(elements) {
+    const lines = [];
+    lines.push('*' + gsiTxtWord('41', '....', 'ALN') + ' ' + gsiTxtWord('42', '....', 'HZALIGNM') + ' ' + gsiTxtWord('43', '....', 'STACOORD') + ' ');
+    for (const e of elements) {
+      const w11 = gsiNumWord('11', '....', e.station);
+      const w71 = gsiTxtWord('71', '....', e.type);
+      let w72;
+      if (e.type === 'CURVE') w72 = gsiNumWord('72', '....', e.radius);
+      else w72 = gsiWord('72', '....', '+', 'NON');
+      const w73 = gsiWord('73', '....', '+', 0);
+      const w81 = gsiNumWord('81', '..10', e.E);
+      const w82 = gsiNumWord('82', '..10', e.N);
+      lines.push('*' + [w11, w71, w72, w73, w81, w82].join(' ') + ' ');
+    }
+    return lines.join('\r\n') + '\r\n';
+  }
+
+  function writePRF(elements) {
+    const lines = [];
+    lines.push('*' + gsiTxtWord('41', '....', 'ALN') + ' ' + gsiTxtWord('42', '....', 'VALIGNM') + ' ' + gsiTxtWord('43', '....', 'STACOORD') + ' ');
+    for (const e of elements) {
+      const w11 = gsiNumWord('11', '....', e.station);
+      const w71 = gsiTxtWord('71', '....', e.type);
+      let w72;
+      // Netcad writes K x 100 with one decimal (e.g. K = 0.48352 -> 48.400)
+      if (e.type === 'PARABOLA') w72 = gsiWord('72', '....', e.K < 0 ? '-' : '+', Math.abs(Math.round(e.K * 1000)) * 100);
+      else w72 = gsiWord('72', '....', '+', 'NON');
+      const w83 = gsiNumWord('83', '..10', e.elev);
+      lines.push('*' + [w11, w71, w72, w83].join(' ') + ' ');
+    }
+    return lines.join('\r\n') + '\r\n';
+  }
+
+  // ============================================================
+  // GSI-16 READER (for the "compare / validate" feature)
+  // ============================================================
+  function parseGsiLine(line) {
+    const words = line.trim().replace(/^\*/, '').split(/\s+/).filter(Boolean);
+    const rec = {};
+    for (const w of words) {
+      const wi = w.slice(0, 2);
+      const sign = w[6];
+      const valStr = w.slice(7);
+      // try numeric
+      const asNum = /^[0-9]+$/.test(valStr) ? parseInt(valStr, 10) : NaN;
+      const asText = valStr.replace(/^0+/, '') || '0';
+      rec[wi] = { raw: valStr, sign, num: isNaN(asNum) ? null : (sign === '-' ? -asNum : asNum), text: asText };
+    }
+    return rec;
+  }
+  function parseALNFile(text) {
+    const lines = text.split(/\r?\n/).filter(l => l.trim().length);
+    const out = [];
+    for (let i = 0; i < lines.length; i++) { // header has no WI 11 and is skipped below
+      const r = parseGsiLine(lines[i]);
+      if (!r['11']) continue;
+      out.push({
+        station: r['11'].num / 1000,
+        type: r['71'] ? r['71'].text : '',
+        radius: r['72'] && r['72'].num != null ? r['72'].num / 1000 : null,
+        E: r['81'] ? r['81'].num / 1000 : null,
+        N: r['82'] ? r['82'].num / 1000 : null,
+      });
+    }
+    return out;
+  }
+  function parsePRFFile(text) {
+    const lines = text.split(/\r?\n/).filter(l => l.trim().length);
+    const out = [];
+    for (let i = 0; i < lines.length; i++) { // header has no WI 11 and is skipped below
+      const r = parseGsiLine(lines[i]);
+      if (!r['11']) continue;
+      out.push({
+        station: r['11'].num / 1000,
+        type: r['71'] ? r['71'].text : '',
+        K: r['72'] && r['72'].num != null ? r['72'].num / 100000 : null,
+        elev: r['83'] ? r['83'].num / 1000 : null,
+      });
+    }
+    return out;
+  }
+
+  // ============================================================
+  // LANDXML  PARSER  (Civil3D / Netcad standard export)
+  //   Produces the SAME element shape used everywhere above, so
+  //   writeALN/writePRF/writeLandXML can consume it directly.
+  //   Spiral-Curve-Spiral triplets are collapsed into a single
+  //   CURVE record spanning entry-spiral-start .. exit-spiral-end
+  //   at the circular radius -- this matches how Netcad itself
+  //   exports to the field GSI format (validated against real data:
+  //   the GSI ALN/PRF format has no spiral element at all).
+  //   The exact (uncollapsed) element list is also returned as
+  //   `exactElements` for a higher-fidelity LandXML re-export.
+  // ============================================================
+  function textOf(el) { return el ? el.textContent.trim() : ''; }
+  function nv(str) { // "N E" -> {N,E}  (LandXML point order is Northing Easting)
+    const p = str.trim().split(/\s+/).map(Number);
+    return { N: p[0], E: p[1] };
+  }
+
+  // Determine a Curve/Spiral's turn direction as +1 (right/clockwise) or
+  // -1 (left/counter-clockwise). Tolerant of spelling variants beyond the
+  // strict "cw"/"ccw" the schema specifies (some exporters write out
+  // "clockwise"/"counterclockwise", or "left"/"right"). If `rot` is
+  // missing entirely, fall back to the Center point when present -- its
+  // side of the Start-End chord (via a 2D cross product) tells us the
+  // direction unambiguously, which is more reliable than silently
+  // guessing "clockwise" as the earlier code did.
+  function rotSign(el, start, end) {
+    const rot = (el.getAttribute('rot') || '').toLowerCase();
+    if (rot) {
+      if (rot.startsWith('ccw') || rot.includes('counter') || rot === 'left') return -1;
+      if (rot.startsWith('cw') || rot === 'clockwise' || rot === 'right') return 1;
+    }
+    const centerNode = tagAny(el, 'Center')[0];
+    if (centerNode) {
+      const c = nv(textOf(centerNode));
+      // cross product of (end-start) x (center-start); sign tells which
+      // side of the chord the center sits on, which fixes the turn sense.
+      const cross = (end.E - start.E) * (c.N - start.N) - (end.N - start.N) * (c.E - start.E);
+      return cross < 0 ? 1 : -1;
+    }
+    return 1; // last-resort default, matches the schema's own default of "cw"
+  }
+
+  function tagAny(root, name) {
+    // namespace-tolerant lookup: works whether the file uses a default
+    // namespace (no prefix, most common) or an explicit prefix.
+    let list = root.getElementsByTagName(name);
+    if (list.length) return list;
+    list = root.getElementsByTagNameNS('*', name);
+    return list;
+  }
+
+  function parseLandXML(xmlText, alignIndex) {
+    // Civil3D exports often bundle a full alignment PLUS a huge terrain
+    // Surface (TIN) with tens of thousands of points -- feeding all of
+    // that to DOMParser can be slow or make the tab look like it "won't
+    // open". Since we only need <Alignments>, slice that block out first
+    // when the file is large, and parse just that (still schema-valid on
+    // its own once wrapped).
+    let toParse = xmlText;
+    if (xmlText.length > 3_000_000) {
+      const m = xmlText.match(/<Alignments[\s\S]*?<\/Alignments>/);
+      if (m) {
+        const nsMatch = xmlText.match(/<LandXML[^>]*xmlns="([^"]+)"/);
+        const ns = nsMatch ? nsMatch[1] : 'http://www.landxml.org/schema/LandXML-1.2';
+        toParse = `<LandXML xmlns="${ns}">${m[0]}</LandXML>`;
+      }
+    }
+
+    const doc = new DOMParser().parseFromString(toParse, 'application/xml');
+    const errNode = doc.querySelector('parsererror');
+    if (errNode) {
+      throw new Error('LandXML çözümlenemedi (geçersiz/bozuk XML içeriği). Dosyanın Civil3D\'den tam '
+        + 've kesintisiz dışa aktarıldığından emin olun; sorun sürerse dosyayı paylaşın.');
+    }
+
+    const alignmentNodes = tagAny(doc, 'Alignment');
+    if (!alignmentNodes.length) {
+      throw new Error('Dosyada <Alignment> etiketi bulunamadı. Bu bir LandXML "Alignment" (güzergah) '
+        + 'dışa aktarımı mı, yoksa yalnızca yüzey/nokta bulutu dışa aktarımı mı olduğunu kontrol edin.');
+    }
+    const alignmentNames = Array.from(alignmentNodes).map((n, k) => n.getAttribute('name') || `ALIGNMENT ${k + 1}`);
+    const idx = Math.max(0, Math.min(alignmentNodes.length - 1, alignIndex | 0));
+    const alignmentNode = alignmentNodes[idx];
+    const staStart = parseFloat(alignmentNode.getAttribute('staStart') || '0') || 0;
+    const warnings = [];
+
+    const coordGeom = tagAny(alignmentNode, 'CoordGeom')[0];
+    const exactElements = [];
+    let station = staStart;
+
+    if (coordGeom) {
+      const kids = Array.from(coordGeom.children);
+      let i = 0;
+      while (i < kids.length) {
+        const el = kids[i];
+        const tag = el.tagName.replace(/^.*:/, '');
+        if (tag === 'Line') {
+          const start = nv(textOf(tagAny(el, 'Start')[0]));
+          const end = nv(textOf(tagAny(el, 'End')[0]));
+          const length = Engine_lineLen(start, end);
+          if (!exactElements.length) exactElements.push({ type: 'STRAIGHT', station, E: start.E, N: start.N });
+          station += length;
+          exactElements.push({ type: 'STRAIGHT', station, E: end.E, N: end.N });
+          i++;
+        } else if (tag === 'Spiral') {
+          const start = nv(textOf(tagAny(el, 'Start')[0]));
+          const end = nv(textOf(tagAny(el, 'End')[0]));
+          const length = parseFloat(el.getAttribute('length')) || Engine_lineLen(start, end);
+          const rStartAttr = el.getAttribute('radiusStart');
+          const rEndAttr = el.getAttribute('radiusEnd');
+          const startIsInf = rStartAttr === 'INF' || Math.abs(parseFloat(rStartAttr) || 0) > 1e6;
+          const R = startIsInf ? parseFloat(rEndAttr) : parseFloat(rStartAttr);
+          const sign = rotSign(el, start, end);
+          if (!exactElements.length) exactElements.push({ type: 'STRAIGHT', station, E: start.E, N: start.N });
+          // entry: curvature grows 0 -> 1/R along the direction of travel
+          // (radiusStart is the infinite/straight end). exit: the mirror
+          // image, curvature shrinks 1/R -> 0. Needed to evaluate points
+          // partway along the spiral correctly (see evalHorizontal).
+          exactElements.push({ type: 'SPIRAL', station, E: start.E, N: start.N, endE: end.E, endN: end.N, length, radius: Math.abs(R), sign, entry: startIsInf });
+          station += length;
+          // A Spiral must ALSO get an explicit marker at its own true end
+          // (mirroring what the Curve handler already does) -- otherwise
+          // `elements[i+1]` for an EXIT spiral followed by a plain Line
+          // ends up being the NEXT curve's entry spiral, far down the
+          // route, and both evalHorizontal/evalHorizontalDir and the plan
+          // view then keep applying this spiral's curvature all the way
+          // to that distant point instead of stopping at its real end.
+          exactElements.push({ type: 'STRAIGHT', station, E: end.E, N: end.N });
+          i++;
+        } else if (tag === 'Curve') {
+          const start = nv(textOf(tagAny(el, 'Start')[0]));
+          const end = nv(textOf(tagAny(el, 'End')[0]));
+          const radius = parseFloat(el.getAttribute('radius'));
+          if (isNaN(radius) || radius <= 0) {
+            // A Curve with no usable radius would NaN-poison every station
+            // after it (station += NaN turns the whole rest of the route
+            // into NaN). Skip just this element's arc length contribution
+            // instead -- treat it as a straight jump from Start to End so
+            // the rest of the alignment still comes out with real numbers.
+            if (!exactElements.length) exactElements.push({ type: 'STRAIGHT', station, E: start.E, N: start.N });
+            const fallbackLen = Engine_lineLen(start, end);
+            station += fallbackLen;
+            exactElements.push({ type: 'STRAIGHT', station, E: end.E, N: end.N });
+            i++;
+            continue;
+          }
+          const deltaDeg = parseFloat(el.getAttribute('delta'));
+          const length = parseFloat(el.getAttribute('length')) || (!isNaN(deltaDeg) ? radius * Math.abs(deltaDeg) * Math.PI / 180 : Engine_lineLen(start, end));
+          const sign = rotSign(el, start, end);
+          // Cross-check against the file's OWN delta when it provides one
+          // (Civil3D always does) -- this is redundant data, so if our
+          // radius/length reading disagrees with it by more than rounding,
+          // something upstream (units, a mis-parsed attribute) is wrong,
+          // and it is much better to say so than to silently trust a bad
+          // number.
+          if (!isNaN(deltaDeg) && radius > 0) {
+            const impliedDeltaDeg = (length / radius) * 180 / Math.PI;
+            if (Math.abs(impliedDeltaDeg - Math.abs(deltaDeg)) > 0.01) {
+              warnings.push(`PK ${station.toFixed(3)} civarındaki kurp: dosyanın kendi delta değeri (${deltaDeg}°) ile `
+                + `uzunluk/yarıçaptan hesaplanan (${impliedDeltaDeg.toFixed(3)}°) uyuşmuyor -- radius/length okuması hatalı olabilir.`);
+            }
+          }
+          if (!exactElements.length) exactElements.push({ type: 'STRAIGHT', station, E: start.E, N: start.N });
+          exactElements.push({ type: 'CURVE', station, E: start.E, N: start.N, radius: radius * sign, length });
+          station += length;
+          exactElements.push({ type: 'STRAIGHT', station, E: end.E, N: end.N });
+          i++;
+        } else { i++; }
+      }
+    }
+    if (exactElements.length) exactElements.push({ type: 'EOP', station, E: exactElements[exactElements.length - 1].E, N: exactElements[exactElements.length - 1].N });
+
+    // Cross-check against the Alignment's own declared total length, when
+    // present -- another piece of redundant data Civil3D always writes,
+    // free extra confidence that nothing was mis-read along the way.
+    const declaredLength = parseFloat(alignmentNode.getAttribute('length'));
+    if (!isNaN(declaredLength) && exactElements.length) {
+      const computedLength = station - staStart;
+      if (Math.abs(computedLength - declaredLength) > 0.01) {
+        warnings.push(`Güzergahın hesaplanan toplam uzunluğu (${computedLength.toFixed(3)} m), dosyanın kendi `
+          + `beyan ettiği uzunlukla (${declaredLength.toFixed(3)} m) uyuşmuyor -- bir elemanın gözden kaçmış `
+          + `veya yanlış okunmuş olma ihtimali var.`);
+      }
+    }
+
+    // A Line's End and the following Curve/Spiral's Start are the same
+    // physical point pushed twice (once as a plain STRAIGHT marker, once
+    // as the CURVE/SPIRAL marker) -- collapse that into a single record,
+    // preferring the more specific type, so the transition point isn't
+    // duplicated in the output.
+    function mergeSameStationDuplicates(list) {
+      const out = [];
+      for (const e of list) {
+        const p = out[out.length - 1];
+        if (p && Math.abs(e.station - p.station) < 1e-6 && p.type === 'STRAIGHT' && e.type !== 'STRAIGHT') {
+          out[out.length - 1] = e; // replace the plain marker with the more specific one
+        } else {
+          out.push(e);
+        }
+      }
+      return out;
+    }
+    const mergedExact = mergeSameStationDuplicates(exactElements);
+    exactElements.length = 0;
+    exactElements.push(...mergedExact);
+
+    // ---- circular-equivalent list for GSI export (see collapseForGSI) ----
+    const collapsed = collapseForGSI(exactElements);
+
+    // ---- Profile ----
+    // A Civil3D Alignment can carry MORE THAN ONE <Profile> (e.g. one
+    // sampled-existing-ground profile using <ProfSurf>, one design profile
+    // using <ProfAlign>) -- taking only the first one is wrong whenever
+    // that happens to be the existing-ground profile, since it has no
+    // ProfAlign at all and the real design PVIs never get read. Scan all
+    // of them and use the first that actually has a ProfAlign.
+    const profileNodes = tagAny(alignmentNode, 'Profile');
+    let profAlign = null;
+    for (let pi = 0; pi < profileNodes.length; pi++) {
+      const pa = tagAny(profileNodes[pi], 'ProfAlign')[0];
+      if (pa) { profAlign = pa; break; }
+    }
+    const pvis = [];
+    if (profAlign) {
+      for (const child of Array.from(profAlign.children)) {
+        const tag = child.tagName.replace(/^.*:/, '');
+        if (tag === 'PVI') {
+          const [s, e] = textOf(child).split(/\s+/).map(Number);
+          pvis.push({ station: s, elev: e, L: 0 });
+        } else if (tag === 'ParaCurve' || tag === 'CircCurve' || tag === 'UnsymParaCurve') {
+          // ParaCurve = parabolic vertical curve -> the standard quadratic
+          // formula is exact for it. CircCurve = a TRUE circular arc: for
+          // ordinary road grades (a few percent) the quadratic is still an
+          // excellent stand-in, but this engine has also been fed test
+          // data with grades over 50% -- at that scale the small-angle
+          // assumption the quadratic relies on measurably breaks down
+          // (confirmed: up to ~0.47 m divergence at real angles this
+          // extreme), so CircCurve is tagged here and given the exact
+          // trigonometric treatment in computeVertical/evalVertical
+          // instead of silently reusing the parabola's approximation.
+          const curveType = tag === 'CircCurve' ? 'circ' : tag === 'UnsymParaCurve' ? 'unsym' : 'para';
+          // the file's own values are used as they are:
+          //  ParaCurve length, CircCurve radius (+length), UnsymParaCurve lengthIn/lengthOut
+          const extra = {};
+          if (curveType === 'circ') extra.radius = parseFloat(child.getAttribute('radius')) || 0;
+          if (curveType === 'unsym') {
+            extra.Lin = parseFloat(child.getAttribute('lengthIn')) || 0;
+            extra.Lout = parseFloat(child.getAttribute('lengthOut')) || 0;
+          }
+          const len = curveType === 'unsym' ? (extra.Lin + extra.Lout) : (parseFloat(child.getAttribute('length')) || 0);
+          // The PVI's station/elevation can appear either as a nested
+          // <PVI>station elev</PVI> child, OR (seen in real Civil3D
+          // CircCurve exports) directly as the element's own text content
+          // with no nested <PVI> at all -- handle both.
+          const pviNode = tagAny(child, 'PVI')[0];
+          const raw = pviNode ? textOf(pviNode) : textOf(child);
+          const parts = raw.split(/\s+/).map(Number);
+          const s = parts[0], e = parts[1];
+          if (!isNaN(s) && !isNaN(e)) {
+            if (pvis.length && Math.abs(pvis[pvis.length - 1].station - s) < 1e-6) {
+              Object.assign(pvis[pvis.length - 1], { L: len, curveType }, extra);
+            } else {
+              pvis.push({ station: s, elev: e, L: len, curveType, ...extra });
+            }
+          }
+        }
+      }
+    }
+
+    return {
+      name: alignmentNode.getAttribute('name') || 'ALIGNMENT',
+      // verbatim copy of the source for the LandXML re-export: the design
+      // alignment and profile are passed through untouched, never rebuilt
+      source: {
+        rootOpen: (xmlText.match(/<(?:[\w.-]+:)?LandXML\b[^>]*>/) || [null])[0],
+        units: (xmlText.match(/<(?:[\w.-]+:)?Units\b[\s\S]*?<\/(?:[\w.-]+:)?Units>/) || [null])[0],
+        coordSys: (xmlText.match(/<(?:[\w.-]+:)?CoordinateSystem\b[\s\S]*?(?:\/>|<\/(?:[\w.-]+:)?CoordinateSystem>)/) || [null])[0],
+        alignment: new XMLSerializer().serializeToString(alignmentNode),
+        hasCrossSects: tagAny(alignmentNode, 'CrossSects').length > 0,
+      },
+      alignmentCount: alignmentNodes.length,
+      alignmentNames,
+      alignmentIndex: idx,
+      staStart,
+      collapsedHorizontal: collapsed.length ? collapsed : null,
+      exactHorizontal: exactElements,
+      pvis,
+      warnings,
+    };
+  }
+  // ============================================================
+  // GSI CIRCULAR-EQUIVALENT  (exact LandXML elements -> ALN records)
+  //  GSI-16 ALN carries no spiral, so every [entry spiral] + [arc] +
+  //  [exit spiral] unit is replaced by ONE circular arc of the design
+  //  radius R that is tangent to the same two straights: the tangents at
+  //  the unit's start/end are intersected to get its PI, and
+  //  PC/PT = PI -/+ R*tan(delta/2) -- the same construction the KTB engine
+  //  uses. The arc is therefore geometrically closed and tangent (which
+  //  the old "arc of radius R from TS to ST" was not: it over-turned by
+  //  Ls/R). The unavoidable price is a small chainage difference on the
+  //  following straight (~2*p*tan(delta/2), p = spiral shift), which is
+  //  reported per curve as `stationShift` and by the export self-check.
+  // ============================================================
+  function collapseForGSI(ex) {
+    const out = [];
+    let i = 0;
+    while (i < ex.length) {
+      const e = ex[i];
+      if (e.type !== 'SPIRAL' && e.type !== 'CURVE') {
+        out.push({ type: e.type, station: e.station, E: e.E, N: e.N });
+        i++;
+        continue;
+      }
+      let j = i, R = 0, sign = 1, hasSpiral = false;
+      if (ex[j].type === 'SPIRAL' && ex[j].entry) { R = ex[j].radius; sign = ex[j].sign; hasSpiral = true; j++; }
+      if (ex[j] && ex[j].type === 'CURVE') { R = Math.abs(ex[j].radius); sign = ex[j].radius >= 0 ? 1 : -1; j++; }
+      if (ex[j] && ex[j].type === 'SPIRAL' && !ex[j].entry) { if (!R) { R = ex[j].radius; sign = ex[j].sign; } hasSpiral = true; j++; }
+      const end = ex[j];
+      if (!end) { out.push({ type: 'STRAIGHT', station: e.station, E: e.E, N: e.N }); break; }
+      const S0 = e.station, S1 = end.station;
+
+      if (!hasSpiral) {
+        // plain arc: already exact in GSI terms
+        out.push({ type: 'CURVE', station: S0, E: e.E, N: e.N, radius: R * sign, length: S1 - S0 });
+        i = j;
+        continue;
+      }
+      const eps = Math.min(1e-4, (S1 - S0) / 10);
+      const dIn = evalHorizontalDir(ex, S0 + eps);
+      const dOut = evalHorizontalDir(ex, S1 - eps);
+      const delta = normDelta(dOut - dIn), ad = Math.abs(delta);
+      const u1 = { E: Math.sin(dIn), N: Math.cos(dIn) }, u2 = { E: Math.sin(dOut), N: Math.cos(dOut) };
+      const den = u1.E * u2.N - u1.N * u2.E;
+      if (!(R > 0) || ad < 1e-9 || Math.abs(den) < 1e-9) {
+        // no usable deflection (or ~180 deg): keep the positions as knots
+        out.push({ type: 'STRAIGHT', station: S0, E: e.E, N: e.N, gsiNote: 'dönüşümsüz spiral' });
+        i = j;
+        continue;
+      }
+      const D = { E: end.E - e.E, N: end.N - e.N };
+      const t1 = (D.E * u2.N - D.N * u2.E) / den;       // start -> PI along u1
+      const t2 = (u1.E * D.N - u1.N * D.E) / den;       // PI -> end along u2
+      const PI = { E: e.E + t1 * u1.E, N: e.N + t1 * u1.N };
+      const T = R * Math.tan(ad / 2);
+      const PC = { E: PI.E - T * u1.E, N: PI.N - T * u1.N };
+      const PT = { E: PI.E + T * u2.E, N: PI.N + T * u2.N };
+      const sPC = S0 + (t1 - T);
+      const sPT = sPC + R * ad;
+      if (t1 - T > 1e-6) out.push({ type: 'STRAIGHT', station: S0, E: e.E, N: e.N });
+      out.push({ type: 'CURVE', station: sPC, E: PC.E, N: PC.N, radius: R * sign, length: R * ad,
+        stationShift: (S1 - sPT) - (t2 - T), fromSpiral: true });
+      out.push({ type: 'STRAIGHT', station: sPT, E: PT.E, N: PT.N });
+      i = j;
+    }
+    return out;
+  }
+
+  // ============================================================
+  // GSI "DEVICE MODEL"  -- evaluates ALN/PRF records using ONLY what the
+  // file itself carries (station, type, radius/K, coordinates), the way a
+  // field controller has to. Used by the export self-check.
+  // ============================================================
+  function gsiCurveDirIn(A, B) {
+    const R = Math.abs(A.radius), sign = A.radius >= 0 ? 1 : -1;
+    const L = B.station - A.station;
+    return az(A, B) - sign * L / (2 * R);
+  }
+  function evalGsiH(recs, s) {
+    for (let k = 0; k < recs.length - 1; k++) {
+      const A = recs[k], B = recs[k + 1];
+      if (s < A.station - 1e-6 || s > B.station + 1e-6) continue;
+      if (A.type === 'CURVE' && A.radius) {
+        const R = Math.abs(A.radius), sign = A.radius >= 0 ? 1 : -1;
+        const d0 = gsiCurveDirIn(A, B);
+        const cE = A.E + R * Math.sin(d0 + sign * Math.PI / 2), cN = A.N + R * Math.cos(d0 + sign * Math.PI / 2);
+        const a0 = Math.atan2(A.E - cE, A.N - cN) + sign * (s - A.station) / R;
+        return { E: cE + R * Math.sin(a0), N: cN + R * Math.cos(a0) };
+      }
+      const t = (s - A.station) / ((B.station - A.station) || 1);
+      return { E: A.E + t * (B.E - A.E), N: A.N + t * (B.N - A.N) };
+    }
+    const k = s < recs[0].station ? recs[0] : recs[recs.length - 1];
+    return { E: k.E, N: k.N };
+  }
+  // PRF: a PARABOLA record gives BVC station/elev and K; its length runs to
+  // the next record, and gIn follows from K and the next record's elevation.
+  function prfParabola(A, B) {
+    const L = B.station - A.station;
+    const gIn = ((B.elev - A.elev) - L * L / (200 * A.K)) / L;
+    return { L, gIn, gOut: gIn + L / (100 * A.K) };
+  }
+  function evalGsiV(recs, s) {
+    for (let k = 0; k < recs.length - 1; k++) {
+      const A = recs[k], B = recs[k + 1];
+      if (s < A.station - 1e-6 || s > B.station + 1e-6) continue;
+      const x = s - A.station;
+      if (A.type === 'PARABOLA' && A.K) {
+        const p = prfParabola(A, B);
+        return A.elev + p.gIn * x + x * x / (200 * A.K);
+      }
+      return A.elev + (B.elev - A.elev) * x / ((B.station - A.station) || 1);
+    }
+    return s < recs[0].station ? recs[0].elev : recs[recs.length - 1].elev;
+  }
+
+  // Self-check of an ALN before download. `source` = the element list it was
+  // written from, `design` = the true (spiral-aware) geometry for info.
+  // errors => something is wrong and the file should not go to the field;
+  // warnings => inherent limits of the format, shown with their size.
+  function checkALN(alnText, source, design, tol) {
+    tol = tol || 0.01;
+    const errors = [], warnings = [], info = [];
+    const recs = parseALNFile(alnText);
+    if (recs.length < 2) { errors.push('ALN\'de en az 2 kayıt olmalı.'); return { errors, warnings, info, recs }; }
+    recs.forEach((r, k) => {
+      if (![r.station, r.E, r.N].every(Number.isFinite)) errors.push(`Kayıt ${k + 1}: sayısal olmayan değer (PK/E/N).`);
+      if (r.type === 'CURVE' && !(Math.abs(r.radius) > 0)) errors.push(`Kayıt ${k + 1} (PK ${r.station.toFixed(3)}): CURVE yarıçapı yok.`);
+      if (k > 0 && r.station < recs[k - 1].station - 1e-6) errors.push(`PK ${recs[k - 1].station.toFixed(3)} → ${r.station.toFixed(3)}: istasyon geri gidiyor.`);
+    });
+    if (recs[recs.length - 1].type !== 'EOP') errors.push('ALN EOP kaydıyla bitmiyor.');
+    if (errors.length) return { errors, warnings, info, recs };
+
+    let maxStraightMismatch = 0, worst = null;
+    for (let k = 0; k < recs.length - 1; k++) {
+      const A = recs[k], B = recs[k + 1], L = B.station - A.station;
+      if (A.type === 'CURVE') {
+        const R = Math.abs(A.radius);
+        if (L > 2 * Math.PI * R) { errors.push(`PK ${A.station.toFixed(3)}: kurp tam daireden uzun.`); continue; }
+        const chord = Math.hypot(B.E - A.E, B.N - A.N), expect = 2 * R * Math.abs(Math.sin(L / (2 * R)));
+        if (Math.abs(chord - expect) > tol) {
+          errors.push(`PK ${A.station.toFixed(3)} kurbu kapanmıyor: R=${R.toFixed(3)} ve yay boyu ${L.toFixed(3)} m ile bitiş noktası `
+            + `${Math.abs(chord - expect).toFixed(3)} m farklı.`);
+        }
+      } else if (L > 1e-6) {
+        const mm = Math.abs(L - Math.hypot(B.E - A.E, B.N - A.N));
+        if (mm > maxStraightMismatch) { maxStraightMismatch = mm; worst = A.station; }
+      }
+    }
+    // tangency at every joint that touches a curve (straight-straight joints
+    // are allowed corners)
+    const segDir = (k, atEnd) => {
+      const A = recs[k], B = recs[k + 1];
+      if (A.type === 'CURVE') {
+        const d0 = gsiCurveDirIn(A, B), sign = A.radius >= 0 ? 1 : -1;
+        return atEnd ? d0 + sign * (B.station - A.station) / Math.abs(A.radius) : d0;
+      }
+      return az(A, B);
+    };
+    for (let k = 1; k < recs.length - 1; k++) {
+      if (recs[k - 1].type !== 'CURVE' && recs[k].type !== 'CURVE') continue;
+      const lenPrev = Math.hypot(recs[k].E - recs[k - 1].E, recs[k].N - recs[k - 1].N);
+      const lenNext = Math.hypot(recs[k + 1].E - recs[k].E, recs[k + 1].N - recs[k].N);
+      if (lenPrev < 1e-3 || lenNext < 1e-3) continue;
+      const ang = Math.abs(normDelta(segDir(k, false) - segDir(k - 1, true)));
+      const lateral = ang * Math.min(lenPrev, lenNext);
+      if (lateral > tol) errors.push(`PK ${recs[k].station.toFixed(3)}: kurp ile komşu eleman teğet değil (${(ang * 180 / Math.PI).toFixed(4)}°, ~${lateral.toFixed(3)} m sapma).`);
+    }
+    if (maxStraightMismatch > 1.0) {
+      errors.push(`Doğru parçasında PK farkı ile gerçek uzunluk ${maxStraightMismatch.toFixed(3)} m farklı (PK ${worst.toFixed(3)} sonrası) -- `
+        + `geometri tutarsız, kurplar iç içe geçiyor olabilir.`);
+    } else if (maxStraightMismatch > tol) {
+      warnings.push(`Doğru parçalarında PK farkı ile gerçek uzunluk en fazla ${maxStraightMismatch.toFixed(3)} m farklı (PK ${worst.toFixed(3)} sonrası). `
+        + `GSI klotoid taşımadığı için geçiş eğrili kurplardan sonra oluşur; Netcad çıktısında da benzer fark vardır.`);
+    }
+    // round trip: file vs the element list it was written from
+    let maxRT = 0, maxDesign = 0, atDesign = null;
+    const s0 = recs[0].station, s1 = recs[recs.length - 1].station;
+    const n = Math.max(2, Math.ceil((s1 - s0) / 5));
+    for (let q = 0; q <= n; q++) {
+      const s = s0 + (s1 - s0) * q / n;
+      const g = evalGsiH(recs, s);
+      if (source) { const p = evalHorizontal(source, s); maxRT = Math.max(maxRT, Math.hypot(g.E - p.E, g.N - p.N)); }
+      if (design) {
+        const p = evalHorizontal(design, s), d = Math.hypot(g.E - p.E, g.N - p.N);
+        if (d > maxDesign) { maxDesign = d; atDesign = s; }
+      }
+    }
+    if (source && maxRT > tol) errors.push(`Dosyadan geri okunan konum, hesaplanan güzergahtan ${maxRT.toFixed(3)} m ayrılıyor.`);
+    if (design && maxDesign > tol) {
+      info.push(`Aynı PK'da tasarım (klotoidli) geometrisine göre en büyük konum farkı ${maxDesign.toFixed(3)} m (PK ${atDesign.toFixed(1)}). `
+        + `Bu, daire-eşdeğer GSI yönteminin doğal sonucudur.`);
+    }
+    info.push(`${recs.length} kayıt, PK ${s0.toFixed(3)} – ${s1.toFixed(3)}, geri okuma farkı ${maxRT.toFixed(4)} m.`);
+    return { errors, warnings, info, recs };
+  }
+
+  function checkPRF(prfText, source, tol) {
+    tol = tol || 0.005;
+    const errors = [], warnings = [], info = [];
+    const recs = parsePRFFile(prfText);
+    if (recs.length < 2) { errors.push('PRF\'de en az 2 kayıt olmalı.'); return { errors, warnings, info, recs }; }
+    recs.forEach((r, k) => {
+      if (![r.station, r.elev].every(Number.isFinite)) errors.push(`Kayıt ${k + 1}: sayısal olmayan değer (PK/kot).`);
+      if (r.type === 'PARABOLA' && !(Math.abs(r.K) > 0)) errors.push(`Kayıt ${k + 1} (PK ${r.station.toFixed(3)}): PARABOLA için K değeri yok/0.`);
+      if (k > 0 && r.station < recs[k - 1].station - 1e-6) errors.push(`PK ${recs[k - 1].station.toFixed(3)} → ${r.station.toFixed(3)}: istasyon geri gidiyor.`);
+    });
+    if (recs[recs.length - 1].type !== 'EOP') errors.push('PRF EOP kaydıyla bitmiyor.');
+    if (errors.length) return { errors, warnings, info, recs };
+    // tangency: grade into / out of each parabola vs neighbouring straights
+    for (let k = 0; k < recs.length - 1; k++) {
+      const A = recs[k], B = recs[k + 1];
+      if (A.type !== 'PARABOLA') continue;
+      const p = prfParabola(A, B);
+      if (k > 0 && recs[k - 1].type !== 'PARABOLA') {
+        const P = recs[k - 1], g = (A.elev - P.elev) / (A.station - P.station);
+        const dz = Math.abs(g - p.gIn) * p.L / 2;
+        if (dz > tol) errors.push(`PK ${A.station.toFixed(3)} rakoru giriş eğimiyle uyuşmuyor (~${dz.toFixed(3)} m).`);
+      }
+      if (k + 2 < recs.length && B.type !== 'PARABOLA') {
+        const C = recs[k + 2], g = (C.elev - B.elev) / (C.station - B.station);
+        const dz = Math.abs(g - p.gOut) * p.L / 2;
+        if (dz > tol) errors.push(`PK ${A.station.toFixed(3)} rakoru çıkış eğimiyle uyuşmuyor (~${dz.toFixed(3)} m).`);
+      }
+    }
+    let maxRT = 0, at = null, circ = false;
+    const s0 = recs[0].station, s1 = recs[recs.length - 1].station;
+    const n = Math.max(2, Math.ceil((s1 - s0) / 2));
+    for (let q = 0; q <= n && source; q++) {
+      const s = s0 + (s1 - s0) * q / n;
+      const d = Math.abs(evalGsiV(recs, s) - evalVertical(source, s));
+      if (d > maxRT) { maxRT = d; at = s; }
+    }
+    if (source) circ = source.some(e => e.type === 'PARABOLA' && e.circular && at != null && at >= e.station - 1e-6 && at <= e.station + e.L + 1e-6);
+    if (maxRT > tol) {
+      const m = `Dosyadan geri okunan kot, hesaplanan profilden ${maxRT.toFixed(3)} m ayrılıyor (PK ${at.toFixed(1)}).`;
+      if (circ) warnings.push(m + ' Bu bölge dairesel düşey kurp: PRF yalnız parabol taşıyabildiği için fark oluşur.');
+      else errors.push(m);
+    }
+    info.push(`${recs.length} kayıt, PK ${s0.toFixed(3)} – ${s1.toFixed(3)}, geri okuma farkı ${maxRT.toFixed(4)} m.`);
+    return { errors, warnings, info, recs };
+  }
+
+  // ============================================================
+  // POINT TOOLS  (PK/offset <-> E/N, stakeout table)
+  //  offset > 0 = right of the direction of increasing chainage
+  // ============================================================
+  function pointAt(elements, s, offset) {
+    const c = evalHorizontal(elements, s);
+    if (!offset) return c;
+    const d = evalHorizontalDir(elements, s) + Math.PI / 2;
+    return { E: c.E + offset * Math.sin(d), N: c.N + offset * Math.cos(d) };
+  }
+  function stationOffsetOf(elements, E, N, sMin, sMax) {
+    if (sMin == null) sMin = elements[0].station;
+    if (sMax == null) sMax = elements[elements.length - 1].station;
+    const f = s => { const p = evalHorizontal(elements, s); return Math.hypot(p.E - E, p.N - N); };
+    const step = Math.max(0.25, (sMax - sMin) / 4000);
+    let best = sMin, bestD = Infinity;
+    for (let s = sMin; s <= sMax + 1e-9; s += step) { const d = f(s); if (d < bestD) { bestD = d; best = s; } }
+    if (f(sMax) < bestD) { best = sMax; bestD = f(sMax); }
+    let a = Math.max(sMin, best - step), b = Math.min(sMax, best + step);
+    for (let it = 0; it < 60; it++) {
+      const m1 = a + (b - a) / 3, m2 = b - (b - a) / 3;
+      if (f(m1) < f(m2)) b = m2; else a = m1;
+    }
+    const s = (a + b) / 2;
+    const c = evalHorizontal(elements, s), d = evalHorizontalDir(elements, s) + Math.PI / 2;
+    const offset = (E - c.E) * Math.sin(d) + (N - c.N) * Math.cos(d);
+    const along = (E - c.E) * Math.sin(d - Math.PI / 2) + (N - c.N) * Math.cos(d - Math.PI / 2);
+    const outside = (s - sMin < 1e-3 && along < -1e-3) || (sMax - s < 1e-3 && along > 1e-3);
+    return { station: s, offset, distance: Math.hypot(E - c.E, N - c.N), outside };
+  }
+
+  // elevation at `offset` on one cross-section (main sub-profile, linear)
+  function xsElevAt(xs, offset) {
+    const groups = splitIntoSubProfiles(xs.points);
+    const main = groups.reduce((a, b) => (b.length > a.length ? b : a), groups[0]);
+    const pts = [...main].sort((a, b) => a.offset - b.offset);
+    if (!pts.length || offset < pts[0].offset - 1e-6 || offset > pts[pts.length - 1].offset + 1e-6) return null;
+    for (let k = 0; k < pts.length - 1; k++) {
+      if (offset >= pts[k].offset - 1e-6 && offset <= pts[k + 1].offset + 1e-6) {
+        const w = pts[k + 1].offset - pts[k].offset;
+        return w < 1e-9 ? pts[k].elev : pts[k].elev + (pts[k + 1].elev - pts[k].elev) * (offset - pts[k].offset) / w;
+      }
+    }
+    return pts[pts.length - 1].elev;
+  }
+  // cross-section elevation at (station, offset), linear between the two
+  // neighbouring sections -- null where not covered (or gap > maxGap)
+  function xsElevation(crossSections, s, offset, maxGap) {
+    if (!crossSections || !crossSections.length) return null;
+    const sorted = crossSections.slice().sort((a, b) => a.station - b.station);
+    maxGap = maxGap || estimateStationStep(sorted) * 2.5;
+    for (let k = 0; k < sorted.length; k++) {
+      if (Math.abs(sorted[k].station - s) < 1e-6) return xsElevAt(sorted[k], offset);
+    }
+    for (let k = 0; k < sorted.length - 1; k++) {
+      const a = sorted[k], b = sorted[k + 1];
+      if (s > a.station && s < b.station) {
+        if (b.station - a.station > maxGap) return null;
+        const za = xsElevAt(a, offset), zb = xsElevAt(b, offset);
+        if (za == null || zb == null) return null;
+        return za + (zb - za) * (s - a.station) / (b.station - a.station);
+      }
+    }
+    return null;
+  }
+
+  function formatPK(s) {
+    const neg = s < 0, a = Math.abs(s);
+    let km = Math.floor(a / 1000), m = a - km * 1000;
+    if (Number((m).toFixed(2)) >= 1000) { km += 1; m = 0; }
+    return (neg ? '-' : '') + km + '+' + m.toFixed(2).padStart(6, '0');
+  }
+
+  function generateStakeout(opts) {
+    const { horizontal, vertical, crossSections, sStart, sEnd, interval, offsets, keyPoints } = opts;
+    const stations = [];
+    const add = (s, tag) => { if (s >= sStart - 1e-6 && s <= sEnd + 1e-6) stations.push({ s: Math.min(sEnd, Math.max(sStart, s)), tag }); };
+    add(sStart, 'BAŞ');
+    if (interval > 0) {
+      for (let s = Math.ceil((sStart - 1e-9) / interval) * interval; s < sEnd - 1e-6; s += interval) add(s, '');
+    }
+    if (keyPoints) {
+      // KB/KS = kurp başı/sonu (PC/PT); TS/SC/CS/ST for transitioned curves
+      summarizeCurves(horizontal).forEach(c => {
+        add(c.pcStation, c.Ls1 > 0 ? 'TS' : 'KB');
+        if (c.Ls1 > 0) add(c.scStation, 'SC');
+        if (c.Ls2 > 0) add(c.csStation, 'CS');
+        add(c.ptStation, c.Ls2 > 0 ? 'ST' : 'KS');
+      });
+      // an unsymmetrical curve is two PARABOLA records joined under its PVI
+      if (vertical) for (const e of vertical) if (e.type === 'PARABOLA') { if (e.unsym !== 2) add(e.station, 'BVC'); if (e.unsym !== 1) add(e.station + e.L, 'EVC'); }
+    }
+    add(sEnd, 'SON');
+    stations.sort((a, b) => a.s - b.s);
+    const uniq = [];
+    for (const st of stations) {
+      const last = uniq[uniq.length - 1];
+      if (last && Math.abs(last.s - st.s) < 1e-4) { if (st.tag && !last.tag.split('/').includes(st.tag)) last.tag = last.tag ? last.tag + '/' + st.tag : st.tag; }
+      else uniq.push({ ...st });
+    }
+    const offs = offsets && offsets.length ? offsets : [0];
+    const rows = [];
+    let n = 1;
+    for (const st of uniq) {
+      // no profile elevation outside the profile's own range (evalVertical
+      // would otherwise just repeat the end elevation)
+      const zAxis = vertical && vertical.length && st.s >= vertical[0].station - 1e-6
+        && st.s <= vertical[vertical.length - 1].station + 1e-6 ? evalVertical(vertical, st.s) : null;
+      for (const o of offs) {
+        const p = pointAt(horizontal, st.s, o);
+        rows.push({
+          no: n++, station: st.s, pk: formatPK(st.s), offset: o, E: p.E, N: p.N,
+          zAxis, zXs: xsElevation(crossSections, st.s, o), tag: st.tag,
+        });
+      }
+    }
+    return rows;
+  }
+
+  function Engine_lineLen(a, b) { return Math.hypot(b.E - a.E, b.N - a.N); }
+
+  // ============================================================
+  // SYMMETRIC SPIRAL-CURVE-SPIRAL  (for higher-fidelity LandXML
+  // export when Ls1==Ls2 in the KTB source). Standard textbook
+  // clothoid approximation (4th-order series).
+  // ============================================================
+  function spiralPK(Ls, R) {
+    if (!Ls || !R) return { th: 0, p: 0, k: 0 };
+    const th = Ls / (2 * R);
+    const X = Ls * (1 - th * th / 10 + th ** 4 / 216);
+    const Y = Ls * (th / 3 - th ** 3 / 42 + th ** 5 / 1320);
+    return { th, p: Y - R * (1 - Math.cos(th)), k: X - R * Math.sin(th) };
+  }
+
+  // ============================================================
+  // LANDXML  WRITER   (for GNSS / RTK roading import)
+  // ============================================================
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+  function curveCenter(pt, dir, R, sign) {
+    return { E: pt.E + R * Math.sin(dir + sign * Math.PI / 2), N: pt.N + R * Math.cos(dir + sign * Math.PI / 2) };
+  }
+  const R2D = 180 / Math.PI;
+
+  function curveXml(rotSign, R, start, end, center, length, delta, dirStart) {
+    const tangent = R * Math.tan(delta / 2);
+    const chord = 2 * R * Math.sin(delta / 2);
+    const piTag = dirStart != null
+      ? `<PI>${(start.N + tangent * Math.cos(dirStart)).toFixed(4)} ${(start.E + tangent * Math.sin(dirStart)).toFixed(4)}</PI>`
+      : '';
+    return `<Curve rot="${rotSign > 0 ? 'cw' : 'ccw'}" crvType="arc" radius="${R.toFixed(4)}" length="${length.toFixed(4)}" delta="${(delta * R2D).toFixed(6)}" tangent="${tangent.toFixed(4)}" chord="${chord.toFixed(4)}"><Start>${start.N.toFixed(4)} ${start.E.toFixed(4)}</Start><Center>${center.N.toFixed(4)} ${center.E.toFixed(4)}</Center><End>${end.N.toFixed(4)} ${end.E.toFixed(4)}</End>${piTag}</Curve>`;
+  }
+
+  // Standard clothoid tangent distances (from the TS/ST end towards the
+  // spiral's own PI, where its two tangent lines cross) -- verified
+  // against a real Civil3D export: tanLong/tanShort computed this way
+  // matched its own written tanLong/tanShort attributes exactly.
+  function spiralTangents(Ls, R) {
+    const th = Ls / (2 * R);
+    const X = X_of(Ls, th), Y = Y_of(Ls, th);
+    return { th, tanLong: X - Y / Math.tan(th), tanShort: Y / Math.sin(th) };
+  }
+  function spiralXml(rot, length, radiusStart, radiusEnd, start, end, piPoint) {
+    const piTag = piPoint ? `<PI>${piPoint.N.toFixed(4)} ${piPoint.E.toFixed(4)}</PI>` : '';
+    return `<Spiral rot="${rot}" length="${length.toFixed(4)}" radiusStart="${radiusStart}" radiusEnd="${radiusEnd}" spiType="clothoid"><Start>${start.N.toFixed(4)} ${start.E.toFixed(4)}</Start>${piTag}<End>${end.N.toFixed(4)} ${end.E.toFixed(4)}</End></Spiral>`;
+  }
+
+  function writeLandXML(opts) {
+    const { name = 'GUZERGAH', horizontal, pvis, pis, useSpiral, crossSections, breaklines, mesh } = opts;
+    // staStart is the station of the HORIZONTAL alignment's first point --
+    // not the first PVI's (a profile starting at 0+020 used to shift the
+    // whole alignment 20 m on the GNSS device).
+    const alignStaStart = opts.staStart != null ? opts.staStart
+      : (horizontal && horizontal.length ? horizontal[0].station : 0);
+    const geomLines = [];
+
+    if (pis && pis.length >= 2) {
+      // rebuild from the full PI list (always the whole alignment, not the
+      // GSI field-export sub-range -- GNSS/RTK roading import expects the
+      // complete design alignment).
+      let prevPt = pis[0];
+      for (let i = 1; i < pis.length - 1; i++) {
+        const R = pis[i].R, Ls1 = pis[i].Ls1, Ls2 = pis[i].Ls2;
+        const az_in = az(prevPt, pis[i]);
+        const az_out = az(pis[i], pis[i + 1]);
+        const delta = normDelta(az_out - az_in);
+        const sign = delta >= 0 ? 1 : -1;
+        const ad = Math.abs(delta);
+        const symmetric = useSpiral && R > 0 && Ls1 && Ls2 && Math.abs(Ls1 - Ls2) < 1e-3 && ad > Ls1 / R;
+
+        if (symmetric) {
+          const { th, p, k } = spiralPK(Ls1, R);
+          const T = (R + p) * Math.tan(ad / 2) + k;
+          const TS = { E: pis[i].E - T * Math.sin(az_in), N: pis[i].N - T * Math.cos(az_in) };
+          const ST = { E: pis[i].E + T * Math.sin(az_out), N: pis[i].N + T * Math.cos(az_out) };
+          const SC = { E: TS.E + X_of(Ls1, th) * Math.sin(az_in) + Y_of(Ls1, th) * Math.sin(az_in + sign * Math.PI / 2), N: TS.N + X_of(Ls1, th) * Math.cos(az_in) + Y_of(Ls1, th) * Math.cos(az_in + sign * Math.PI / 2) };
+          const CS = { E: ST.E - X_of(Ls2, th) * Math.sin(az_out) + Y_of(Ls2, th) * Math.sin(az_out + sign * Math.PI / 2), N: ST.N - X_of(Ls2, th) * Math.cos(az_out) + Y_of(Ls2, th) * Math.cos(az_out + sign * Math.PI / 2) };
+          const dirAtSC = az_in + sign * th;
+          const center = curveCenter(SC, dirAtSC, R, sign);
+          const deltaC = ad - 2 * th;
+          const Lc = R * deltaC;
+          // Real Civil3D Spiral/Curve elements also carry a <PI> (each
+          // element's own tangent-intersection point) plus derived
+          // tanLong/tanShort/theta metadata -- included here too since a
+          // minimal Start/End/radius-only Spiral, while geometrically
+          // sufficient, is missing data Civil3D's own importer/renderer
+          // expects and fills in a distorted-looking way otherwise.
+          const t1 = spiralTangents(Ls1, R);
+          const t2 = spiralTangents(Ls2, R);
+          const spiralPI1 = { E: TS.E + t1.tanLong * Math.sin(az_in), N: TS.N + t1.tanLong * Math.cos(az_in) };
+          const spiralPI2 = { E: ST.E - t2.tanLong * Math.sin(az_out), N: ST.N - t2.tanLong * Math.cos(az_out) };
+          geomLines.push(`<Line><Start>${prevPt.N.toFixed(4)} ${prevPt.E.toFixed(4)}</Start><End>${TS.N.toFixed(4)} ${TS.E.toFixed(4)}</End></Line>`);
+          geomLines.push(spiralXml(sign > 0 ? 'cw' : 'ccw', Ls1, 'INF', R.toFixed(4), TS, SC, spiralPI1));
+          geomLines.push(curveXml(sign, R, SC, CS, center, Lc, deltaC, dirAtSC));
+          geomLines.push(spiralXml(sign > 0 ? 'cw' : 'ccw', Ls2, R.toFixed(4), 'INF', CS, ST, spiralPI2));
+          prevPt = ST;
+        } else if (R && ad > 1e-9) {
+          const T = Math.abs(R) * Math.tan(ad / 2);
+          const Rabs = Math.abs(R);
+          const PC = { E: pis[i].E - T * Math.sin(az_in), N: pis[i].N - T * Math.cos(az_in) };
+          const PT = { E: pis[i].E + T * Math.sin(az_out), N: pis[i].N + T * Math.cos(az_out) };
+          const center = curveCenter(PC, az_in, Rabs, sign);
+          const L = Rabs * ad;
+          geomLines.push(`<Line><Start>${prevPt.N.toFixed(4)} ${prevPt.E.toFixed(4)}</Start><End>${PC.N.toFixed(4)} ${PC.E.toFixed(4)}</End></Line>`);
+          geomLines.push(curveXml(sign, Rabs, PC, PT, center, L, ad, az_in));
+          prevPt = PT;
+        }
+        else if (ad > 1e-9) {
+          // R=0 corner: end the Line AT the PI so the next one starts there
+          // (otherwise the corner is cut by a single straight Line)
+          geomLines.push(`<Line><Start>${prevPt.N.toFixed(4)} ${prevPt.E.toFixed(4)}</Start><End>${pis[i].N.toFixed(4)} ${pis[i].E.toFixed(4)}</End></Line>`);
+          prevPt = pis[i];
+        }
+        // else: collinear PI -- tangent simply continues through it
+      }
+      const last = pis[pis.length - 1];
+      geomLines.push(`<Line><Start>${prevPt.N.toFixed(4)} ${prevPt.E.toFixed(4)}</Start><End>${last.N.toFixed(4)} ${last.E.toFixed(4)}</End></Line>`);
+    } else if (horizontal) {
+      // LandXML source re-export: use the already-explicit elements
+      // (Line/Spiral/Curve) exactly as parsed, including real spirals --
+      // and get each Curve's true tangent direction from evalHorizontalDir
+      // (which now understands spirals) instead of approximating it from
+      // the chord between its own endpoints.
+      for (let i = 0; i < horizontal.length; i++) {
+        const e = horizontal[i];
+        const n = horizontal[i + 1];
+        if (!n) continue;
+        if (e.type === 'STRAIGHT') {
+          geomLines.push(`<Line><Start>${e.N.toFixed(4)} ${e.E.toFixed(4)}</Start><End>${n.N.toFixed(4)} ${n.E.toFixed(4)}</End></Line>`);
+        } else if (e.type === 'SPIRAL') {
+          const endE = e.endE != null ? e.endE : n.E, endN = e.endN != null ? e.endN : n.N;
+          const rot = e.sign > 0 ? 'cw' : 'ccw';
+          const rStart = e.entry ? 'INF' : e.radius.toFixed(4);
+          const rEnd = e.entry ? e.radius.toFixed(4) : 'INF';
+          geomLines.push(`<Spiral rot="${rot}" length="${e.length.toFixed(4)}" radiusStart="${rStart}" radiusEnd="${rEnd}" spiType="clothoid"><Start>${e.N.toFixed(4)} ${e.E.toFixed(4)}</Start><End>${endN.toFixed(4)} ${endE.toFixed(4)}</End></Spiral>`);
+        } else if (e.type === 'CURVE') {
+          const Rabs = Math.abs(e.radius);
+          const sign = e.radius >= 0 ? 1 : -1;
+          const dirIn = evalHorizontalDir(horizontal, e.station);
+          const center = curveCenter(e, dirIn, Rabs, sign);
+          const arcLen = n.station - e.station;
+          const ad = Rabs > 0 ? arcLen / Rabs : 0;
+          geomLines.push(curveXml(sign, Rabs, e, n, center, arcLen, ad, dirIn));
+        }
+      }
+    }
+
+    // ---------------- Profile (Civil3D-style: PVI chain, ParaCurve wraps a single apex PVI) ----------------
+    const profLines = [];
+    if (pvis && pvis.length) {
+      for (let i = 0; i < pvis.length; i++) {
+        const v = pvis[i];
+        // Civil3D layout: the PVI coordinates are the curve element's own
+        // text (<CircCurve length radius>PK KOT</CircCurve>), full precision
+        const pt = `${+v.station.toFixed(8)} ${+v.elev.toFixed(8)}`;
+        if (i > 0 && i < pvis.length - 1 && v.L > 0 && v.curveType === 'circ') {
+          // keep a circular vertical curve circular on re-export; the file's
+          // own radius (KTB column R / LandXML radius) is used as-is
+          const g1 = (v.elev - pvis[i - 1].elev) / (v.station - pvis[i - 1].station);
+          const g2 = (pvis[i + 1].elev - v.elev) / (pvis[i + 1].station - v.station);
+          const ds = Math.abs(Math.sin(Math.atan(g2)) - Math.sin(Math.atan(g1)));
+          const rad = v.radius > 0 ? v.radius : ds > 1e-12 ? v.L / ds : 0;
+          profLines.push(`<CircCurve length="${+v.L.toFixed(8)}" radius="${+rad.toFixed(8)}">${pt}</CircCurve>`);
+        } else if (i > 0 && i < pvis.length - 1 && v.L > 0) {
+          profLines.push(`<ParaCurve length="${+v.L.toFixed(8)}">${pt}</ParaCurve>`);
+        } else {
+          profLines.push(`<PVI>${pt}</PVI>`);
+        }
+      }
+    }
+
+    // ---------------- Cross sections (from KSP) ----------------
+    // A station's raw point sequence can contain a small secondary detail
+    // (e.g. a ditch/gutter) whose offsets are not in strict left-to-right
+    // order -- connecting the raw file order as one polyline then draws a
+    // spurious back-and-forth spike. GeoMax/X-PAD (and most simple field
+    // importers) only read a single <Feature>/<PntList2D> per <CrossSect>,
+    // so rather than splitting into multiple Features (which such
+    // importers may simply ignore beyond the first one), we keep ONE
+    // feature and sort its points by offset -- this yields a clean,
+    // single-valued left-to-right cross-section shape and is a no-op for
+    // the (common) case where the points were already in that order.
+    const xsLines = [];
+    if (crossSections && crossSections.length) {
+      for (const xs of crossSections) {
+        // Use only the main sub-profile (the one with the most points --
+        // in practice the full platform+slope template) for this single-
+        // Feature representation, so a small secondary detail sharing an
+        // offset with the main line (see splitIntoSubProfiles) can't
+        // create a spurious zero-width "vertical" segment when connected
+        // as if it were part of one continuous transect.
+        const groups = splitIntoSubProfiles(xs.points);
+        const main = groups.reduce((a, b) => (b.length > a.length ? b : a), groups[0]);
+        const sorted = [...main].sort((a, b) => a.offset - b.offset);
+        const pairs = sorted.map(p => `${p.offset.toFixed(4)} ${p.elev.toFixed(4)}`).join(' ');
+        xsLines.push(`<CrossSect sta="${xs.station.toFixed(4)}"><Feature code="EnKesit"><PntList2D>${pairs}</PntList2D></Feature></CrossSect>`);
+      }
+    }
+
+    // ---------------- Surface breaklines (real N/E/Z, from KSP) ----------------
+    // A more broadly-compatible companion to <CrossSects>: many field
+    // controllers only reliably import per-station offset/elevation point
+    // lists if THEY do the offset->3D projection, which not all of them do.
+    // Real (N,E,Z) breaklines are read like any ordinary terrain/design
+    // surface, which is much more universally supported.
+    const surfLines = [];
+    if (breaklines && breaklines.length) {
+      for (const bl of breaklines) {
+        const pts = bl.points.map(p => `${p.N.toFixed(4)} ${p.E.toFixed(4)} ${p.Z.toFixed(4)}`).join(' ');
+        surfLines.push(`<Breakline desc="${esc(bl.name)}"><PntList3D>${pts}</PntList3D></Breakline>`);
+      }
+    }
+    // A real TIN definition (points + 3-point faces), triangulated between
+    // consecutive cross sections -- more complete than breaklines alone,
+    // since it doesn't depend on the receiving software to triangulate.
+    let defBlock = '<Definition surfType="TIN"></Definition>';
+    if (mesh && mesh.points.length && mesh.faces.length) {
+      const pntsXml = mesh.points.map(p => `<P id="${p.id}">${p.N.toFixed(4)} ${p.E.toFixed(4)} ${p.Z.toFixed(4)}</P>`).join('');
+      const facesXml = mesh.faces.map(f => `<F>${f[0]} ${f[1]} ${f[2]}</F>`).join('');
+      defBlock = `<Definition surfType="TIN"><Pnts>${pntsXml}</Pnts><Faces>${facesXml}</Faces></Definition>`;
+    }
+
+    if (opts.source && opts.source.alignment) {
+      // LandXML -> LandXML: the file's own Units / CoordinateSystem /
+      // Alignment (CoordGeom + Profile) are copied byte-for-byte; only the
+      // cross-section data derived from the KSP is added.
+      const src = opts.source;
+      const rootOpen = src.rootOpen && !/^<[\w.-]+:/.test(src.rootOpen) ? src.rootOpen
+        : '<LandXML xmlns="http://www.landxml.org/schema/LandXML-1.2" version="1.2">';
+      let align = src.alignment;
+      if (xsLines.length && !src.hasCrossSects) {
+        const m = align.match(/<\/((?:[\w.-]+:)?)Alignment>\s*$/);
+        if (m) {
+          align = align.slice(0, m.index) + `<CrossSects>\n        ${xsLines.join('\n        ')}\n      </CrossSects>\n    ` + align.slice(m.index);
+        }
+      }
+      return `<?xml version="1.0" encoding="UTF-8"?>
+${rootOpen}
+  ${src.units || '<Units><Metric linearUnit="meter" areaUnit="squareMeter" volumeUnit="cubicMeter" angularUnit="decimal degrees" directionUnit="decimal degrees"/></Units>'}
+  ${src.coordSys || ''}
+  <Alignments>
+    ${align}
+  </Alignments>
+  ${(surfLines.length || (mesh && mesh.points.length)) ? `<Surfaces>\n    <Surface name="${esc(name)}_ENKESIT" desc="Enkesit noktalarindan turetilen yuzey">\n      <SourceData>\n        <Breaklines>\n          ${surfLines.join('\n          ')}\n        </Breaklines>\n      </SourceData>\n      ${defBlock}\n    </Surface>\n  </Surfaces>` : ''}
+</LandXML>
+`;
+    }
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<LandXML xmlns="http://www.landxml.org/schema/LandXML-1.2" version="1.2" date="${new Date().toISOString().slice(0, 10)}" time="00:00:00">
+  <Units>
+    <Metric linearUnit="meter" areaUnit="squareMeter" volumeUnit="cubicMeter" temperatureUnit="celsius" pressureUnit="milliBars" angularUnit="decimal degrees" directionUnit="decimal degrees"/>
+  </Units>
+  <Alignments>
+    <Alignment name="${esc(name)}" staStart="${alignStaStart.toFixed(4)}">
+      <CoordGeom>
+        ${geomLines.join('\n        ')}
+      </CoordGeom>
+      ${profLines.length ? `<Profile name="${esc(name)}-PROFIL"><ProfAlign>\n        ${profLines.join('\n        ')}\n      </ProfAlign></Profile>` : ''}
+      ${xsLines.length ? `<CrossSects>\n        ${xsLines.join('\n        ')}\n      </CrossSects>` : ''}
+    </Alignment>
+  </Alignments>
+  ${(surfLines.length || (mesh && mesh.points.length)) ? `<Surfaces>\n    <Surface name="${esc(name)}_ENKESIT" desc="Enkesit noktalarindan turetilen yuzey">\n      <SourceData>\n        <Breaklines>\n          ${surfLines.join('\n          ')}\n        </Breaklines>\n      </SourceData>\n      ${defBlock}\n    </Surface>\n  </Surfaces>` : ''}
+</LandXML>
+`;
+  }
+  function X_of(Ls, th) { return Ls * (1 - th * th / 10 + th ** 4 / 216); }
+  // Raw clothoid Y (Fresnel sine integral) -- the actual perpendicular
+  // offset of a point ON the spiral from its own initial tangent line.
+  function Y_of(Ls, th) { return Ls * (th / 3 - th ** 3 / 42 + th ** 5 / 1320); }
+  // The "shift" p = Y - R(1-cos th): a DIFFERENT quantity used only for
+  // locating TS/ST relative to the PI (T = (R+p)tan(delta/2)+k) -- it must
+  // NOT be used as the SC/CS point's own offset from TS/ST (that is Y_of).
+  function p_perp(Ls, R, th) { return Y_of(Ls, th) - R * (1 - Math.cos(th)); }
+
+  // ============================================================
+  // KSP PARSER (Netcad cross-section / enkesit file)
+  //   "1 <index> <station>"  then repeated "0 <offset> <elev> <label>"
+  // ============================================================
+  // Netcad enkesit (.KSP / .KSE). Station block "1 <sıra> <PK> ...",
+  // point "0 <offset> <kot> <kod...>". Exports differ slightly, so also
+  // accepted: comma decimals, PK written as "0+020.00", a code with spaces,
+  // and (only when the file has no "1 ..." blocks at all) station headers
+  // like "PK 0+020.00" / "PK=20" with point rows "<offset> <kot> [kod]".
+  function parseKSP(text) {
+    const NUMS = '[-+]?(?:\\d+[.,]?\\d*|[.,]\\d+)(?:[eE][-+]?\\d+)?';
+    const PKS = `(?:\\d+\\+\\d+(?:[.,]\\d*)?|${NUMS})`;
+    const toNum = t => parseFloat(String(t).replace(',', '.'));
+    const toPK = t => {
+      const m = /^(\d+)\+(\d+(?:[.,]\d*)?)$/.exec(t);
+      return m ? toNum(m[1]) * 1000 + toNum(m[2]) : toNum(t);
+    };
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l && !l.startsWith('@'));
+    const reHead1 = new RegExp(`^1\\s+(\\S+)\\s+(${PKS})(?:\\s|$)`);
+    const rePt0 = new RegExp(`^0\\s+(${NUMS})\\s+(${NUMS})(?:\\s+(.*))?$`);
+    const reHeadPK = new RegExp(`^(?:PK|KM|İSTASYON|ISTASYON)\\s*[:=]?\\s*(${PKS})\\b`, 'i');
+    const rePtFree = new RegExp(`^(${NUMS})\\s+(${NUMS})(?:\\s+(.*))?$`);
+    const netcad = lines.some(l => reHead1.test(l));
+    const sections = [];
+    let cur = null, skipped = 0;
+    for (const line of lines) {
+      const h = netcad ? reHead1.exec(line) : reHeadPK.exec(line);
+      if (h) {
+        if (cur) sections.push(cur);
+        cur = { station: toPK(netcad ? h[2] : h[1]), points: [] };
+        continue;
+      }
+      const m = (netcad ? rePt0 : rePtFree).exec(line);
+      if (m && cur) {
+        cur.points.push({ offset: toNum(m[1]), elev: toNum(m[2]), label: (m[3] || '').trim().replace(/\s+/g, ' ') });
+      } else skipped++;
+    }
+    if (cur) sections.push(cur);
+    const out = sections.filter(x => isFinite(x.station) && x.points.every(p => isFinite(p.offset) && isFinite(p.elev)));
+    out.skippedLines = skipped;
+    out.format = netcad ? 'netcad' : 'pk-header';
+    return out;
+  }
+
+  // Per-code summary of how the cross sections will be joined: which codes
+  // exist, at how many stations, and into how many continuous lines they
+  // are connected (a code missing for more than ~2.5 station steps starts
+  // a new line instead of being bridged).
+  function summarizeCodes(crossSections, maxGap) {
+    maxGap = maxGap || estimateStationStep(crossSections) * 2.5;
+    const byKey = {};
+    for (const xs of crossSections) {
+      for (const p of assignMatchKeys(xs.points)) (byKey[p.matchKey] = byKey[p.matchKey] || []).push(xs.station);
+    }
+    return Object.keys(byKey).map(key => {
+      const st = byKey[key].sort((a, b) => a - b);
+      // same rule as buildCrossSectionBreaklines: a run of >= 2 stations is one line
+      let lines = 0, run = 1;
+      for (let i = 1; i <= st.length; i++) {
+        if (i === st.length || st[i] - st[i - 1] > maxGap) { if (run >= 2) lines++; run = 1; } else run++;
+      }
+      return { code: key, count: st.length, lines, from: st[0], to: st[st.length - 1] };
+    }).sort((a, b) => a.code.localeCompare(b.code, 'tr'));
+  }
+
+  return {
+    dist, az, normDelta,
+    parseKTB, parseLandXML, parseKSP,
+    computeVertical, evalVertical, clipVertical, checkVerticalSource,
+    computeHorizontal, computeHorizontalExact, evalHorizontal, evalHorizontalDir, clipHorizontal, buildCrossSectionBreaklines, buildCrossSectionMesh, summarizeCurves,
+    validateHorizontal, validateVertical, sanityCheckPvis, sanityCheckPis, splitIntoSubProfiles,
+    writeALN, writePRF, writeLandXML,
+    parseALNFile, parsePRFFile,
+    gsiNumWord, gsiTxtWord, gsiWord, spiralPK,
+    collapseForGSI, evalGsiH, evalGsiV, checkALN, checkPRF,
+    pointAt, stationOffsetOf, xsElevation, generateStakeout, formatPK, estimateStationStep, summarizeCodes,
+  };
+})();
+
+if (typeof module !== 'undefined') module.exports = Engine;
+
+/* ============================================================
+   CHARSET  (Windows-1254 / ISO-8859-9 byte encoder for GSI files)
+   ============================================================ */
+const TRMAP = { '\u0130':0xDD, '\u0131':0xFD, '\u015E':0xDE, '\u015F':0xFE,
+                '\u011E':0xD0, '\u011F':0xF0, '\u00DC':0xDC, '\u00FC':0xFC,
+                '\u00D6':0xD6, '\u00F6':0xF6, '\u00C7':0xC7, '\u00E7':0xE7 };
+function toTurkishBytes(str) {
+  const bytes = new Uint8Array(str.length);
+  for (let i = 0; i < str.length; i++) {
+    const c = str.charCodeAt(i);
+    const ch = str[i];
+    bytes[i] = TRMAP[ch] != null ? TRMAP[ch] : (c < 256 ? c : 0x3F);
+  }
+  return bytes;
+}
+function bytesToBase64(bytes) {
+  let binary = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  return btoa(binary);
+}
+function downloadBytes(bytes, filename, mime) {
+  const a = document.createElement('a');
+  a.href = `data:${mime || 'application/octet-stream'};base64,${bytesToBase64(bytes)}`;
+  a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+function downloadText(text, filename) {
+  downloadBytes(new TextEncoder().encode(text), filename, 'application/xml;charset=utf-8');
+}
+
+/* ============================================================
+   APP STATE
+   ============================================================ */
+let STATE = {
+  source: null,       // 'ktb' | 'landxml'
+  pis: null,          // for KTB (or landxml with PI-based rebuild)
+  pvis: null,
+  crossSections: null, // from optional .KSP file
+  landxmlCollapsedH: null,
+  landxmlExactH: null,
+  fullH: null,         // full-route horizontal elements (exact/spiral-aware for LandXML, circular for KTB)
+  fullHForGSI: null,   // same, but always circular-equivalent (used only for ALN/PRF/CrossSects export)
+  fullV: null,         // full-route vertical elements
+  clippedH: null,
+  clippedHForGSI: null,
+  clippedV: null,
+  clippedXS: null,
+  routeMinSta: 0,
+  routeMaxSta: 0,
+};
+
+/* ============================================================
+   FILE HANDLING
+   ============================================================ */
+const drop = document.getElementById('drop');
+const fileInput = document.getElementById('fileInput');
+const fileList = document.getElementById('fileList');
+const parseMsg = document.getElementById('parseMsg');
+
+drop.addEventListener('click', () => fileInput.click());
+['dragover', 'dragleave', 'drop'].forEach(evt => {
+  drop.addEventListener(evt, e => {
+    e.preventDefault();
+    drop.classList.toggle('drag', evt === 'dragover');
+  });
+});
+drop.addEventListener('drop', e => { if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files); });
+fileInput.addEventListener('change', e => { if (e.target.files.length) handleFiles(e.target.files); });
+
+function escHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+// Messages are APPENDED: files dropped together finish reading in any
+// order, and replacing the box would wipe an earlier file's warnings
+// (e.g. the KTB overlap errors disappearing behind the KSP "ok" line).
+function msg(el, type, text) { el.insertAdjacentHTML('beforeend', `<div class="msg ${type}">${text}</div>`); }
+
+function handleFiles(fileArrLike) {
+  let files = Array.from(fileArrLike);
+  // The route file decides the conversion path by its extension:
+  // .ktb -> Netcad KTB path, .xml/.landxml -> LandXML passthrough path.
+  // Only one route per load: two route files would overwrite each other.
+  const routes = files.filter(f => /\.(ktb|xml|landxml)$/i.test(f.name));
+  const hasRoute = routes.length > 0;
+  if (routes.length > 1) {
+    files = files.filter(f => !routes.includes(f) || f === routes[0]);
+  }
+  if (hasRoute) {
+    // A new route replaces the previous project entirely -- including its
+    // cross sections, which would otherwise be attached to the wrong route.
+    fileList.innerHTML = '';
+    parseMsg.innerHTML = '';
+    STATE.crossSections = null;
+    STATE.xsLines = null;
+    if (routes.length > 1) msg(parseMsg, 'warn', `Aynı anda ${routes.length} güzergah dosyası seçildi; yalnız "${escHtml(routes[0].name)}" kullanıldı.`);
+  }
+  for (const f of files) handleFile(f);
+}
+
+// "İşleniyor" indicator: counts pending jobs so overlapping file reads
+// and computations keep it visible until the last one finishes.
+let busyCount = 0;
+function busy(on) {
+  busyCount = Math.max(0, busyCount + (on ? 1 : -1));
+  document.getElementById('busy').style.display = busyCount ? 'block' : 'none';
+}
+// run fn after the browser had a chance to paint the indicator
+function withBusy(fn) {
+  busy(true);
+  setTimeout(() => { try { fn(); } finally { busy(false); } }, 30);
+}
+
+function handleFile(file) {
+  const isXml = /\.xml$|\.landxml$/i.test(file.name);
+  const isKtb = /\.ktb$/i.test(file.name);
+  const isKsp = /\.ksp$/i.test(file.name);
+  const isKse = /\.kse$/i.test(file.name);
+  if (!isXml && !isKtb && !isKsp && !isKse) {
+    msg(parseMsg, 'err', `Desteklenmeyen dosya türü (${escHtml(file.name)}). Lütfen .KTB, .xml/.landxml, .KSP veya .KSE seçin.`);
+    return;
+  }
+  busy(true);
+  const reader = new FileReader();
+  reader.onerror = () => { msg(parseMsg, 'err', `${escHtml(file.name)} okunamadı.`); busy(false); };
+  reader.onload = () => {
+    setTimeout(() => {
+      try {
+        if (isXml) processLandXML(reader.result, file.name, 0);
+        else {
+          // KTB/KSP/KSE are Windows-1254 (Turkish) -- decode the raw bytes
+          const decoded = decodeTurkish(new Uint8Array(reader.result));
+          if (isKtb) processKTB(decoded, file.name);
+          else processKSP(decoded, file.name, isKse);
+        }
+      } finally { busy(false); }
+    }, 30);
+  };
+  if (isXml) reader.readAsText(file, 'UTF-8'); else reader.readAsArrayBuffer(file);
+}
+
+function decodeTurkish(bytes) {
+  // UTF-16 (BOM or every other byte zero) and UTF-8 files are decoded as
+  // such; everything else is Netcad's usual Windows-1254.
+  const n = Math.min(bytes.length, 4000);
+  let zeroOdd = 0, zeroEven = 0;
+  for (let i = 0; i < n; i++) if (!bytes[i]) (i % 2 ? zeroOdd++ : zeroEven++);
+  if ((bytes[0] === 0xFF && bytes[1] === 0xFE) || zeroOdd > n / 4) return new TextDecoder('utf-16le').decode(bytes).replace(/^\uFEFF/, '');
+  if ((bytes[0] === 0xFE && bytes[1] === 0xFF) || zeroEven > n / 4) return new TextDecoder('utf-16be').decode(bytes).replace(/^\uFEFF/, '');
+  if (bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) return new TextDecoder('utf-8').decode(bytes.subarray(3));
+  let hasHigh = false;
+  for (let i = 0; i < bytes.length; i++) if (bytes[i] > 0x7F) { hasHigh = true; break; }
+  if (hasHigh) { try { return new TextDecoder('utf-8', { fatal: true }).decode(bytes); } catch (e) { /* not UTF-8 */ } }
+  // Full Windows-1254 table when the browser has it (covers 0x80-0x9F too)
+  try { return new TextDecoder('windows-1254').decode(bytes); } catch (e) { /* fall back below */ }
+  const REV = {}; for (const k in TRMAP) REV[TRMAP[k]] = k;
+  let s = '';
+  for (let i = 0; i < bytes.length; i++) {
+    const b = bytes[i];
+    s += REV[b] != null ? REV[b] : String.fromCharCode(b);
+  }
+  return s;
+}
+
+function showFile(name, badge) {
+  const div = document.createElement('div');
+  div.className = 'fileitem';
+  div.innerHTML = `<span><b>${escHtml(name)}</b></span><span class="badge">${escHtml(badge)}</span>`;
+  fileList.appendChild(div);
+}
+
+function processKTB(text, fname) {
+  try {
+    const parsed = Engine.parseKTB(text);
+    if (parsed.pis.length < 2) {
+      // say exactly what was found, so the file's layout can be fixed quickly
+      const names = Object.keys(parsed.raw);
+      const firstLines = text.split(/\r\n|\r|\n/).map(l => l.trim()).filter(Boolean).slice(0, 4);
+      msg(parseMsg, 'err', `${escHtml(fname)}: ${parsed.pis.length} yatay nokta, ${parsed.pvis.length} düşey nokta okunabildi. `
+        + `Bulunan bölümler: ${names.length ? names.map(n => '$' + escHtml(n) + ' (' + parsed.raw[n].length + ' satır)').join(', ') : 'yok'}. `
+        + `İlk satırlar: <code>${firstLines.map(escHtml).join(' ⏎ ')}</code>`
+        + (parsed.skipped.length ? `<br>Okunamayan satır örnekleri: <code>${parsed.skipped.slice(0, 3).map(escHtml).join(' ⏎ ')}</code>` : ''));
+      return;
+    }
+    STATE.source = 'ktb';
+    STATE.pis = parsed.pis;
+    STATE.pvis = parsed.pvis;
+    showFile(fname, 'KTB');
+    let extra = '';
+    const piWarn = Engine.sanityCheckPis(parsed.pis);
+    const pviWarn = Engine.sanityCheckPvis(parsed.pvis);
+    if (parsed.skipped && parsed.skipped.length) {
+      piWarn.push(`${parsed.skipped.length} satır okunamadı ve atlandı: `
+        + parsed.skipped.slice(0, 5).map(escHtml).join(' | ') + (parsed.skipped.length > 5 ? ' …' : ''));
+    }
+    if (parsed.km0) {
+      piWarn.push(`$KM0 = ${parsed.km0} bulundu ama yatay istasyonlama 0'dan başlıyor. $DUSEY/KSP istasyonları `
+        + `mutlak km ile yazılmışsa yatay ve düşey PK'lar kayabilir, kontrol edin.`);
+    }
+    if (piWarn.length || pviWarn.length) {
+      extra = `<div class="msg warn">⚠ Ham veri kontrolünde ${piWarn.length + pviWarn.length} şüpheli değer bulundu — `
+        + `sütunlar yanlış okunmuş olabilir, sonuçları özellikle kontrol edin:<br>`
+        + [...piWarn, ...pviWarn].map(w => '• ' + w).join('<br>') + '</div>';
+    }
+    msg(parseMsg, 'ok', `✔ ${parsed.pis.length} yatay nokta (PI), ${parsed.pvis.length} düşey nokta (PVI) okundu.${extra}`);
+    if (parsed.pvis.length < 2) {
+      const dRaw = parsed.raw['DUSEY'];
+      msg(parseMsg, 'warn', (dRaw && dRaw.length ? '⚠ $DUSEY bölümü okunamadı' : '⚠ Bu KTB dosyasında düşey profil ($DUSEY bölümü) yok')
+        + '; yalnız ALN üretilecek, PRF için kırmızı kotun da kaydedildiği KTB gerekir. '
+        + `Bulunan bölümler: ${Object.keys(parsed.raw).map(n => '$' + escHtml(n) + ' (' + parsed.raw[n].length + ' satır)').join(', ')}.`
+        + (dRaw && dRaw.length ? ` $DUSEY ilk satırları: <code>${dRaw.slice(0, 3).map(escHtml).join(' ⏎ ')}</code>` : '')
+       + '');
+    }
+    afterParse();
+  } catch (err) {
+    msg(parseMsg, 'err', 'KTB okunamadı: ' + err.message);
+  }
+}
+
+function processKSP(text, fname, isKse) {
+  const kind = isKse ? 'KSE' : 'KSP';
+  try {
+    const sections = Engine.parseKSP(text);
+    if (!sections.length) {
+      msg(parseMsg, 'warn', `${kind} dosyası okundu ancak enkesit bulunamadı.`
+        + (isKse ? ' KSE formatı KSP ile aynı satır yapısında (\"1 sıra PK\" / \"0 offset kot kod\") varsayılarak okundu — dosyanız farklı bir yapıdaysa (satır başları farklıysa) bana bir örnek paylaşırsanız ayarlarım.' : ''));
+      return;
+    }
+    // sanity check specific to the KSE guess: if points look suspiciously
+    // uniform (e.g. only 1 point per station) it likely means the assumed
+    // KSP-style line format doesn't actually match this KSE file.
+    const avgPts = sections.reduce((s, x) => s + x.points.length, 0) / sections.length;
+    STATE.crossSections = sections;
+    STATE.xsLines = null;
+    showFile(fname, `${kind} (${sections.length} kesit)`);
+    let extra = '';
+    if (isKse && avgPts < 2) {
+      extra = ' ⚠ İstasyon başına ortalama nokta sayısı çok düşük çıktı — KSE dosyanızın satır yapısı KSP\'den farklı olabilir. Sonuçlar hatalıysa dosyayı paylaşın, tam formata göre ayarlayayım.';
+    }
+    if (sections.skippedLines) extra += ` ${sections.skippedLines} satır enkesit satırı olarak tanınmadı ve atlandı.`;
+    const codes = Engine.summarizeCodes(sections);
+    msg(parseMsg, 'ok', `✔ ${kind}: ${sections.length} enkesit okundu (PK ${sections[0].station.toFixed(3)} – ${sections[sections.length - 1].station.toFixed(3)}, ort. ${avgPts.toFixed(1)} nokta/kesit, ${codes.length} kod/taraf). `
+      + `Enkesitler "Önizleme › Enkesitler" sekmesinde gösterilir, kodlarına göre birleştirilip LandXML'e eklenir.${escHtml(extra)}`);
+    // Loaded after "Hesapla": refresh the preview so the new sections show up
+    if (document.getElementById('previewCard').style.display !== 'none') document.getElementById('btnCompute').click();
+  } catch (err) {
+    msg(parseMsg, 'err', `${kind} okunamadı: ` + err.message);
+  }
+}
+
+function processLandXML(text, fname, alignIndex, reselect) {
+  try {
+    const parsed = Engine.parseLandXML(text, alignIndex || 0);
+    STATE.source = 'landxml';
+    STATE.pis = null;
+    STATE.xmlText = text;
+    STATE.xmlName = fname;
+    STATE.alignmentNames = parsed.alignmentNames;
+    STATE.alignmentIndex = parsed.alignmentIndex;
+    STATE.landxmlCollapsedH = parsed.collapsedHorizontal;
+    STATE.landxmlExactH = parsed.exactHorizontal;
+    STATE.landxmlSource = parsed.source;
+    STATE.pvis = parsed.pvis;
+    if (reselect) {
+      parseMsg.innerHTML = '';
+      if (STATE.crossSections && STATE.crossSections.length) {
+        msg(parseMsg, 'info', `Yüklü enkesit (${STATE.crossSections.length} istasyon) bu güzergahla kullanılacak — farklı güzergaha aitse yeniden yükleyin.`);
+      }
+    } else {
+      showFile(fname, 'LandXML');
+    }
+    if (!parsed.exactHorizontal.length) throw new Error('Seçilen güzergahta yatay geometri (CoordGeom) yok.');
+    const nCurves = parsed.exactHorizontal.filter(e => e.type === 'CURVE').length;
+    const extra = parsed.alignmentCount > 1
+      ? ` Dosyada ${parsed.alignmentCount} güzergah var; "Ayarlar" bölümünden seçebilirsiniz.` : '';
+    msg(parseMsg, 'ok', `✔ "${escHtml(parsed.name)}" güzergahı okundu — ${nCurves} kurp, ${parsed.pvis.length} düşey nokta (PVI).${extra}`);
+    if (parsed.warnings && parsed.warnings.length) {
+      msg(parseMsg, 'err', `🚫 Dosyanın kendi verisiyle çapraz kontrolde ${parsed.warnings.length} uyuşmazlık bulundu:<br>`
+        + parsed.warnings.map(w => '• ' + escHtml(w)).join('<br>'));
+    }
+    afterParse();
+  } catch (err) {
+    msg(parseMsg, 'err', 'LandXML okunamadı: ' + escHtml(err.message)
+      + (err.message.includes('paylaşın') ? '' : ' Sorun sürerse dosyayı paylaşabilirsiniz.'));
+  }
+}
+
+function afterParse() {
+  // compute full route elements once
+  if (STATE.source === 'ktb') {
+    const pis = STATE.pis.map(p => ({ name: p.name, E: p.E, N: p.N, R: p.R, Ls1: p.Ls1, Ls2: p.Ls2 }));
+    const h = Engine.computeHorizontal(pis);
+    STATE.fullHForGSI = h.elements; // GSI-16 field format: always circular-equivalent, validated separately
+    // If the KTB carries real (symmetric) transition-curve lengths -- e.g.
+    // read from a $GECIS section -- use them for the general geometry
+    // (plan view, cross-section/mesh positioning) so entry/exit lengths
+    // are properly accounted for there too. Falls back to the identical
+    // circular-equivalent result when no usable spiral data is present,
+    // so this never disagrees with computeHorizontal by itself.
+    STATE.fullH = Engine.computeHorizontalExact(pis);
+  } else {
+    // Civil3D gives us the REAL spiral geometry -- use it (exactHorizontal)
+    // for the plan view, cross-section/mesh point positioning, and the
+    // curve summary, so entry/exit transition lengths are properly
+    // accounted for instead of being averaged away. The GSI-16 field
+    // format (ALN/PRF/CrossSects) still can't carry spirals at all, so
+    // that export alone keeps using the circular-equivalent collapse.
+    STATE.fullH = STATE.landxmlExactH;
+    STATE.fullHForGSI = STATE.landxmlCollapsedH;
+  }
+  STATE.hasVertical = !!(STATE.pvis && STATE.pvis.length >= 2);
+  STATE.fullV = STATE.hasVertical ? Engine.computeVertical(STATE.pvis) : [];
+  if (STATE.hasVertical) {
+    const vw = Engine.checkVerticalSource(STATE.fullV);
+    if (vw.length) msg(parseMsg, 'warn', '⚠ Profil verisinde tutarsızlık:<br>' + vw.map(w => '• ' + escHtml(w)).join('<br>'));
+  }
+
+  // The alignment itself defines the usable range: outside it there are no
+  // coordinates (a longer profile would only produce fake end points).
+  // KTB: the PK the user types is Netcad's stationing, i.e. the chain the
+  // ALN is written from (fullHForGSI) -- with transition curves the exact
+  // chain used for drawing ends a little earlier/later.
+  const staH = (STATE.source === 'ktb' ? STATE.fullHForGSI : STATE.fullH).map(e => e.station);
+  STATE.routeMinSta = Math.min(...staH);
+  STATE.routeMaxSta = Math.max(...staH);
+  if (STATE.hasVertical) {
+    const staV = STATE.fullV.map(e => e.station);
+    STATE.vMinSta = Math.min(...staV);
+    STATE.vMaxSta = Math.max(...staV);
+    if (STATE.vMinSta > STATE.routeMinSta + 1e-3 || STATE.vMaxSta < STATE.routeMaxSta - 1e-3) {
+      msg(parseMsg, 'warn', `⚠ Profil (PK ${STATE.vMinSta.toFixed(3)} – ${STATE.vMaxSta.toFixed(3)}) yatay güzergahın tamamını `
+        + `(PK ${STATE.routeMinSta.toFixed(3)} – ${STATE.routeMaxSta.toFixed(3)}) kapsamıyor; PRF yalnız ortak aralıkta üretilir.`);
+    }
+  }
+
+  document.getElementById('pkStart').value = STATE.routeMinSta.toFixed(3);
+  document.getElementById('pkEnd').value = STATE.routeMaxSta.toFixed(3);
+
+  // alignment picker (LandXML with several alignments)
+  const pick = document.getElementById('alignPick');
+  if (STATE.source === 'landxml' && STATE.alignmentNames && STATE.alignmentNames.length > 1) {
+    const sel = document.getElementById('alignSelect');
+    sel.innerHTML = STATE.alignmentNames.map((n, k) => `<option value="${k}">${escHtml(n)}</option>`).join('');
+    sel.value = String(STATE.alignmentIndex);
+    pick.style.display = '';
+  } else {
+    pick.style.display = 'none';
+  }
+
+  const stats = document.getElementById('routeStats');
+  const spiralCount = STATE.fullH.filter(e => e.type === 'SPIRAL').length;
+  stats.innerHTML = `
+    <div><b>${STATE.routeMinSta.toFixed(3)}</b><span>Başlangıç PK</span></div>
+    <div><b>${STATE.routeMaxSta.toFixed(3)}</b><span>Bitiş PK</span></div>
+    <div><b>${(STATE.routeMaxSta - STATE.routeMinSta).toFixed(3)}</b><span>Toplam uzunluk (m)</span></div>
+    <div><b>${STATE.fullH.filter(e => e.type === 'CURVE').length}${spiralCount ? ` (+${spiralCount} spiral)` : ''}</b><span>Yatay kurp adedi</span></div>
+    <div><b>${STATE.hasVertical ? STATE.fullV.filter(e => e.type === 'PARABOLA').length : '—'}</b><span>Düşey kurp adedi</span></div>
+  `;
+  if (!STATE.hasVertical && STATE.source !== 'ktb') {
+    parseMsg.innerHTML += `<div class="msg warn">⚠ Bu güzergahta düşey profil (Profile / ProfAlign) bulunamadı.
+      PRF ve LandXML profil çıktısı üretilmeyecek — yalnızca ALN (yatay) üretilecek.
+      Civil3D'den dışa aktarırken "Profile" seçeneğinin işaretli olduğundan emin olun.</div>`;
+  }
+
+  const hWarnings = Engine.validateHorizontal(STATE.fullH);
+  if (STATE.fullHForGSI !== STATE.fullH) {
+    for (const w of Engine.validateHorizontal(STATE.fullHForGSI)) if (!hWarnings.includes(w)) hWarnings.push('(GSI) ' + w);
+  }
+  const vWarnings = STATE.hasVertical ? Engine.validateVertical(STATE.fullV) : [];
+  const allWarnings = [...hWarnings, ...vWarnings];
+  if (allWarnings.length) {
+    parseMsg.innerHTML += `<div class="msg err">🚫 <b>${allWarnings.length} geometrik çakışma tespit edildi</b> — bu bölge(ler)deki
+      ALN/PRF çıktısı hatalı olacaktır, sahada kullanmadan önce mutlaka kontrol edin:<br>
+      ${allWarnings.map(w => '• ' + escHtml(w)).join('<br>')}</div>`;
+  }
+
+  document.getElementById('settingsCard').style.display = '';
+  ['previewCard', 'exportCard', 'toolsCard', 'validateCard'].forEach(id => { document.getElementById(id).style.display = 'none'; });
+}
+
+document.getElementById('alignSelect').addEventListener('change', e => {
+  const idx = parseInt(e.target.value, 10);
+  withBusy(() => processLandXML(STATE.xmlText, STATE.xmlName, idx, true));
+});
+
+/* ============================================================
+   COMPUTE / PREVIEW
+   ============================================================ */
+document.getElementById('btnCompute').addEventListener('click', () => withBusy(runCompute));
+
+function runCompute() {
+  let s = parseFloat(document.getElementById('pkStart').value);
+  let e = parseFloat(document.getElementById('pkEnd').value);
+  const tol = parseFloat(document.getElementById('tolInput').value);
+  if (!(tol >= 0)) { alert('Birleştirme toleransı 0 veya pozitif bir sayı olmalı.'); return; }
+  if (isNaN(s) || isNaN(e) || e <= s) {
+    alert('Geçerli bir PK aralığı girin (bitiş > başlangıç).');
+    return;
+  }
+  const notes = [];
+  document.getElementById('computeNote').innerHTML = '';
+  // the boxes show 3 decimals: treat anything within 1 mm of the ends as the ends
+  if (Math.abs(s - STATE.routeMinSta) <= 1e-3) s = STATE.routeMinSta;
+  if (Math.abs(e - STATE.routeMaxSta) <= 1e-3) e = STATE.routeMaxSta;
+  if (s < STATE.routeMinSta - 1e-6 || e > STATE.routeMaxSta + 1e-6) {
+    notes.push(`PK aralığı güzergahın dışına taşıyordu; ${STATE.routeMinSta.toFixed(3)} – ${STATE.routeMaxSta.toFixed(3)} ile sınırlandı.`);
+    s = Math.max(s, STATE.routeMinSta);
+    e = Math.min(e, STATE.routeMaxSta);
+    document.getElementById('pkStart').value = s.toFixed(3);
+    document.getElementById('pkEnd').value = e.toFixed(3);
+    if (e <= s) { alert('Seçilen PK aralığı güzergahla kesişmiyor.'); return; }
+  }
+  try {
+    STATE.clipRange = { s, e };
+    // each chain is clipped inside its own extent: the GSI chain and the
+    // drawing chain can differ in length by a few dm when transition curves
+    // exist, and a range end at the route end must hit each chain's own end
+    // (otherwise the ALN's EOP stops short of the real end point).
+    const clipOwn = (els, a, b) => {
+      const lo = els[0].station, hi = els[els.length - 1].station;
+      const aa = Math.abs(a - STATE.routeMinSta) <= 1e-3 ? lo : Math.max(a, lo);
+      const bb = Math.abs(b - STATE.routeMaxSta) <= 1e-3 ? hi : Math.min(b, hi);
+      return Engine.clipHorizontal(els, aa, Math.max(bb, aa + 1e-3), tol);
+    };
+    STATE.clippedH = clipOwn(STATE.fullH, s, e);
+    STATE.clippedHForGSI = clipOwn(STATE.fullHForGSI, s, e);
+    // the table lists exactly the records that go into the ALN file
+    renderTable('tblH', STATE.clippedHForGSI, ['type', 'station', 'E', 'N', 'radius']);
+    renderCurveSummary(STATE.clippedH);
+    resetPlanView();
+    drawPlan(STATE.clippedH);
+
+    STATE.clippedV = null;
+    if (STATE.hasVertical) {
+      const vs = Math.max(s, STATE.vMinSta), ve = Math.min(e, STATE.vMaxSta);
+      if (ve > vs) {
+        STATE.clippedV = Engine.clipVertical(STATE.fullV, vs, ve, tol);
+        if (vs > s + 1e-6 || ve < e - 1e-6) notes.push(`PRF yalnız profilin kapsadığı PK ${vs.toFixed(3)} – ${ve.toFixed(3)} aralığında üretilir.`);
+      } else {
+        notes.push('Seçilen aralıkta profil yok; PRF üretilemez.');
+      }
+    }
+    if (STATE.clippedV) {
+      renderTable('tblV', STATE.clippedV, ['type', 'station', 'elev', 'K']);
+      drawProfile(STATE.clippedV);
+      document.getElementById('dlPrf').disabled = false;
+    } else {
+      document.getElementById('svgProfil').innerHTML = '<text x="20" y="40" fill="#f0d090" font-size="13">Bu aralıkta düşey profil verisi yok.</text>';
+      document.getElementById('tblV').innerHTML = '<tbody><tr><td>Düşey profil verisi bulunamadı.</td></tr></tbody>';
+      document.getElementById('dlPrf').disabled = true;
+    }
+
+    // ALN/PRF are built BEFORE the cross-section preview: a problem in an
+    // enkesit file must never stop the route files from being produced.
+    buildExports();
+    STATE.clippedXS = [];
+    document.getElementById('tabKesit').style.display = 'none';
+    if (STATE.crossSections && STATE.crossSections.length) {
+      try {
+        STATE.clippedXS = STATE.crossSections.filter(x => x.station >= s - tol && x.station <= e + tol);
+        if (!STATE.xsLines) STATE.xsLines = Engine.buildCrossSectionBreaklines(STATE.crossSections, STATE.fullH);
+        if (STATE.clippedXS.length) {
+          setupCrossSectionViewer(STATE.clippedXS);
+          renderCodeTable(STATE.clippedXS);
+          document.getElementById('tabKesit').style.display = '';
+        } else {
+          notes.push('Yüklü enkesitlerin hiçbiri seçilen PK aralığında değil.');
+        }
+        drawPlanCodeLines(s, e);
+      } catch (err) {
+        console.error(err);
+        notes.push('Enkesitler gösterilemedi (' + err.message + '); ALN/PRF bundan etkilenmez.');
+      }
+    }
+
+    STATE.stakeRows = null;
+    document.getElementById('tblStake').innerHTML = '';
+    document.getElementById('stakeMsg').innerHTML = '';
+    document.getElementById('dlStakeCsv').disabled = true;
+    document.getElementById('dlStakeTxt').disabled = true;
+    if (!document.getElementById('qPk').value) document.getElementById('qPk').value = s.toFixed(3);
+
+    document.getElementById('computeNote').innerHTML = notes.map(n => `<div class="msg info">${escHtml(n)}</div>`).join('');
+    ['previewCard', 'exportCard', 'toolsCard', 'validateCard'].forEach(id => { document.getElementById(id).style.display = ''; });
+  } catch (err) {
+    alert('Hesaplama sırasında bir hata oluştu: ' + err.message
+      + '\n\nBu genellikle beklenmeyen bir veri yapısından kaynaklanır — dosyayı paylaşırsanız düzeltebilirim.');
+    console.error(err);
+  }
+}
+
+// Code-join summary for the cross sections in range
+function renderCodeTable(sections) {
+  const rows = Engine.summarizeCodes(sections);
+  let html = '<thead><tr><th>Kod (taraf)</th><th>Kesit sayısı</th><th>Birleşik çizgi</th><th>PK aralığı</th></tr></thead><tbody>';
+  for (const r of rows) {
+    const warn = r.lines === 0 ? ' style="color:var(--warn)"' : '';
+    html += `<tr${warn}><td>${escHtml(r.code)}</td><td>${r.count}</td><td>${r.lines || 'tek kesitte, birleşmedi'}</td>`
+      + `<td>${Engine.formatPK(r.from)} – ${Engine.formatPK(r.to)}</td></tr>`;
+  }
+  document.getElementById('tblKodlar').innerHTML = html + '</tbody>';
+}
+
+// Code lines (cross sections joined by code) drawn on the plan, in range
+const CODE_COLORS = ['#e0a942', '#4fd1c5', '#e05490', '#9b8cff', '#7fd36b', '#f28b50', '#62b0ff', '#d9d26a'];
+function drawPlanCodeLines(s, e) {
+  const svg = document.getElementById('svgPlan');
+  const old = svg.querySelector('#codeLines'); if (old) old.remove();
+  if (!STATE.xsLines || !STATE.xsLines.length || !PLAN.map) return;
+  const M = PLAN.map;
+  const tx = E => M.offX + (E - M.minX) * M.scale, ty = N => PLAN.H - M.offY - (N - M.minY) * M.scale;
+  const baseCodes = [...new Set(STATE.xsLines.map(l => l.name.replace(/ \((sol|sağ|eks)\).*$/, '')))].sort();
+  let g = '';
+  for (const l of STATE.xsLines) {
+    const pts = l.points.filter(p => p.station >= s - 1e-6 && p.station <= e + 1e-6);
+    if (pts.length < 2) continue;
+    const col = CODE_COLORS[baseCodes.indexOf(l.name.replace(/ \((sol|sağ|eks)\).*$/, '')) % CODE_COLORS.length];
+    g += `<path d="M ${pts.map(p => tx(p.E).toFixed(2) + ' ' + ty(p.N).toFixed(2)).join(' L ')}" fill="none" stroke="${col}" stroke-width="1" opacity="0.8" vector-effect="non-scaling-stroke"><title>${escHtml(l.name)}</title></path>`;
+  }
+  svg.insertAdjacentHTML('afterbegin', `<g id="codeLines">${g}</g>`);
+}
+
+// the exact bytes that will be downloaded
+function buildExports() {
+  STATE.alnText = Engine.writeALN(STATE.clippedHForGSI);
+  STATE.prfText = STATE.clippedV ? Engine.writePRF(STATE.clippedV) : null;
+}
+
+function setupCrossSectionViewer(sections) {
+  const sel = document.getElementById('xsSelect');
+  sel.innerHTML = sections.map((xs, i) => `<option value="${i}">PK ${xs.station.toFixed(3)}  (${xs.points.length} nokta)</option>`).join('');
+  sel.selectedIndex = 0;
+  drawCrossSectionAt(0);
+}
+function drawCrossSectionAt(idx) {
+  const sections = STATE.clippedXS;
+  if (!sections || !sections.length) return;
+  idx = Math.max(0, Math.min(sections.length - 1, idx));
+  document.getElementById('xsSelect').selectedIndex = idx;
+  const xs = sections[idx];
+  // Split into sub-profiles BEFORE sorting/drawing: a real KSP cross-section
+  // can bundle more than one physical template (e.g. a small ditch detail
+  // plus the main platform), and connecting them as one line produces a
+  // spurious vertical spike right at the seam between them. Draw each
+  // sub-profile as its own separate path instead.
+  const groups = Engine.splitIntoSubProfiles(xs.points).map(g => [...g].sort((a, b) => a.offset - b.offset));
+  const allPoints = groups.flat();
+
+  // --- draw ---
+  const svg = document.getElementById('svgKesit');
+  const offs = allPoints.map(p => p.offset), elevs = allPoints.map(p => p.elev);
+  const minO = Math.min(...offs, 0), maxO = Math.max(...offs, 0);
+  const minE = Math.min(...elevs), maxE = Math.max(...elevs);
+  const pad = 40, W = 1000, H = 400;
+  const sx = (W - 2 * pad) / ((maxO - minO) || 1);
+  const spanE = (maxE - minE) || 1;
+  const sy = (H - 2 * pad) / spanE;
+  const txX = o => pad + (o - minO) * sx;
+  const tyX = z => H - pad - (z - minE) * sy;
+  const colors = ['#e0a942', '#4fd1c5', '#e05490'];
+  let paths = '', markers = '';
+  groups.forEach((g, gi) => {
+    paths += `<path d="M ${g.map(p => txX(p.offset) + ' ' + tyX(p.elev)).join(' L ')}" fill="none" stroke="${colors[gi % colors.length]}" stroke-width="2"/>`;
+    markers += g.map(p => `<circle cx="${txX(p.offset)}" cy="${tyX(p.elev)}" r="3.5" fill="#4f8cff"/>`
+      + (p.label ? `<text x="${txX(p.offset) + 4}" y="${tyX(p.elev) - 6}" fill="#8f9bbd" font-size="10">${escHtml(p.label)}</text>` : '')).join('');
+  });
+  const axisY = `<line x1="${txX(0)}" y1="${pad}" x2="${txX(0)}" y2="${H - pad}" stroke="#33436b" stroke-dasharray="4,3"/>`;
+  const noteExtra = groups.length > 1 ? ` — ${groups.length} ayrı alt-profil bulundu, birbirine bağlanmadı (renklerle ayrıldı)` : '';
+  svg.innerHTML = `${axisY}${paths}${markers}
+    <text x="8" y="16" fill="#8f9bbd" font-size="11">PK ${xs.station.toFixed(3)} — yatay: offset (m), düşey: kot (m)${noteExtra}</text>`;
+
+  // --- table --- (grouped, with a visual separator between sub-profiles)
+  let html = '<thead><tr><th>Etiket</th><th>Offset (m)</th><th>Kot (m)</th></tr></thead><tbody>';
+  groups.forEach((g, gi) => {
+    if (gi > 0) html += `<tr><td colspan="3" style="text-align:center;color:var(--muted);font-size:11px">— ayrı alt-profil —</td></tr>`;
+    for (const p of g) html += `<tr><td>${p.label ? escHtml(p.label) : '-'}</td><td>${p.offset.toFixed(3)}</td><td>${p.elev.toFixed(3)}</td></tr>`;
+  });
+  document.getElementById('tblKesit').innerHTML = html + '</tbody>';
+}
+document.getElementById('xsSelect').addEventListener('change', e => drawCrossSectionAt(parseInt(e.target.value, 10)));
+document.getElementById('xsPrev').addEventListener('click', () => drawCrossSectionAt(document.getElementById('xsSelect').selectedIndex - 1));
+document.getElementById('xsNext').addEventListener('click', () => drawCrossSectionAt(document.getElementById('xsSelect').selectedIndex + 1));
+
+function renderTable(id, rows, cols) {
+  const labelMap = { type: 'Tür', station: 'PK (m)', E: 'Sağa (E)', N: 'Yukarı (N)', radius: 'Yarıçap (m)', elev: 'Kot (m)', K: 'K değeri' };
+  let html = '<thead><tr>' + cols.map(c => `<th>${labelMap[c]}</th>`).join('') + '</tr></thead><tbody>';
+  for (const r of rows) {
+    html += '<tr>' + cols.map(c => {
+      if (c === 'type') {
+        // SPIRAL belongs to the "curve family" visually too -- it is the
+        // transition INTO/OUT OF a curve, not a plain straight segment,
+        // which is exactly the distinction a Civil3D-style TS/SC/CS/ST
+        // rendering makes with its own colour coding.
+        const cls = (r.type === 'CURVE' || r.type === 'PARABOLA') ? 'c' : (r.type === 'SPIRAL' ? 'sp' : 's');
+        return `<td><span class="tag ${cls}">${r.type}</span></td>`;
+      }
+      const v = r[c];
+      return `<td>${v != null ? (typeof v === 'number' ? v.toFixed(3) : v) : ''}</td>`;
+    }).join('') + '</tr>';
+  }
+  html += '</tbody>';
+  document.getElementById(id).innerHTML = html;
+}
+
+function renderCurveSummary(elements) {
+  const curves = Engine.summarizeCurves(elements);
+  let html = '<thead><tr><th>#</th><th>TS (Giriş)</th><th>SC</th><th>CS</th><th>ST (Çıkış)</th><th>Yarıçap (m)</th>'
+    + '<th>Ls1</th><th>Dairesel Yay (m)</th><th>Ls2</th>'
+    + '<th>Sapma Açısı (°)</th><th>Yön</th></tr></thead><tbody>';
+  curves.forEach((c, i) => {
+    html += `<tr><td>${i + 1}</td><td>${c.pcStation.toFixed(3)}</td><td>${c.scStation.toFixed(3)}</td><td>${c.csStation.toFixed(3)}</td><td>${c.ptStation.toFixed(3)}</td>`
+      + `<td>${c.radius.toFixed(2)}</td><td>${c.Ls1 > 0 ? c.Ls1.toFixed(3) : '—'}</td><td>${c.arcLength.toFixed(3)}</td>`
+      + `<td>${c.Ls2 > 0 ? c.Ls2.toFixed(3) : '—'}</td><td>${c.deltaDeg.toFixed(3)}</td>`
+      + `<td>${c.sign > 0 ? 'Sağ' : 'Sol'}</td></tr>`;
+  });
+  if (!curves.length) html += '<tr><td colspan="10" style="text-align:center;color:var(--muted)">Bu aralıkta kurp yok.</td></tr>';
+  html += '</tbody>';
+  document.getElementById('tblCurveSummary').innerHTML = html;
+}
+
+document.querySelectorAll('.ptab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.ptab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    ['plan', 'profil', 'kesit', 'tabloH', 'tabloV'].forEach(t => {
+      document.getElementById('pv-' + t).style.display = (t === btn.dataset.t) ? '' : 'none';
+    });
+  });
+});
+
+// Plan view with zoom (wheel), pan (drag), fit (double click) and a hover
+// read-out of PK/offset. Zoom/pan only change the SVG viewBox, so the
+// geometry is drawn once per compute.
+const PLAN = { W: 1000, H: 400, vb: null, map: null, samples: [], elements: null };
+function resetPlanView() { PLAN.vb = { x: 0, y: 0, w: PLAN.W, h: PLAN.H }; }
+function applyPlanView() {
+  const svg = document.getElementById('svgPlan');
+  svg.setAttribute('viewBox', `${PLAN.vb.x} ${PLAN.vb.y} ${PLAN.vb.w} ${PLAN.vb.h}`);
+  // keep markers/labels the same size on screen while zooming
+  const k = PLAN.vb.w / PLAN.W;
+  svg.querySelectorAll('circle[data-r]').forEach(c => c.setAttribute('r', c.dataset.r * k));
+  const hv = svg.querySelector('#planHover');
+  if (hv) hv.setAttribute('font-size', 12 * k);
+}
+function drawPlan(elements) {
+  const svg = document.getElementById('svgPlan');
+  PLAN.elements = elements;
+  if (!PLAN.vb) resetPlanView();
+  const s0 = elements[0].station, s1 = elements[elements.length - 1].station;
+  // dense, station-tagged sampling (also used for the hover read-out);
+  // element boundaries are always included so corners stay sharp
+  const st = new Set();
+  const n = 1500;
+  for (let k = 0; k <= n; k++) st.add(s0 + (s1 - s0) * k / n);
+  elements.forEach(e => st.add(e.station));
+  const stations = [...st].sort((a, b) => a - b);
+  const pts = stations.map(s => ({ s, ...Engine.evalHorizontal(elements, s) }));
+  const xs = pts.map(p => p.E), ys = pts.map(p => p.N);
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+  const pad = 30, W = PLAN.W, H = PLAN.H;
+  const scale = Math.min((W - 2 * pad) / (maxX - minX || 1), (H - 2 * pad) / (maxY - minY || 1));
+  // centre the drawing in the box
+  const offX = (W - (maxX - minX) * scale) / 2, offY = (H - (maxY - minY) * scale) / 2;
+  const tx = e => offX + (e - minX) * scale;
+  const ty = nn => H - offY - (nn - minY) * scale;
+  PLAN.map = { minX, minY, scale, offX, offY };
+  PLAN.samples = pts;
+  const d = 'M ' + pts.map(p => tx(p.E).toFixed(2) + ' ' + ty(p.N).toFixed(2)).join(' L ');
+  let markers = '';
+  for (const el of elements) {
+    const col = el.type === 'CURVE' ? '#4f8cff' : el.type === 'SPIRAL' ? '#7060ff' : '#8f9bbd';
+    const r = el.type === 'CURVE' ? 4 : el.type === 'SPIRAL' ? 3 : 2.5;
+    markers += `<circle cx="${tx(el.E)}" cy="${ty(el.N)}" r="${r}" data-r="${r}" fill="${col}"><title>${el.type} PK ${el.station.toFixed(3)}</title></circle>`;
+  }
+  svg.innerHTML = `<path d="${d}" fill="none" stroke="#33c17a" stroke-width="2" vector-effect="non-scaling-stroke"/>${markers}`
+    + `<circle id="planDot" r="0" data-r="5" fill="#e0a942" style="display:none"/>`
+    + `<text id="planHover" x="0" y="0" fill="#e8ecf5" font-size="12"></text>`;
+  applyPlanView();
+}
+(function initPlanInteraction() {
+  const svg = document.getElementById('svgPlan');
+  const toSvg = ev => {
+    const pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  };
+  svg.addEventListener('wheel', ev => {
+    if (!PLAN.vb) return;
+    ev.preventDefault();
+    const p = toSvg(ev), f = ev.deltaY < 0 ? 0.8 : 1.25;
+    const w = Math.min(PLAN.W * 4, Math.max(PLAN.W / 5000, PLAN.vb.w * f)), h = w * PLAN.H / PLAN.W;
+    PLAN.vb = { x: p.x - (p.x - PLAN.vb.x) * w / PLAN.vb.w, y: p.y - (p.y - PLAN.vb.y) * h / PLAN.vb.h, w, h };
+    applyPlanView();
+  }, { passive: false });
+  let drag = null;
+  svg.addEventListener('pointerdown', ev => {
+    if (!PLAN.vb || ev.button !== 0) return;
+    drag = { cx: ev.clientX, cy: ev.clientY, vb: { ...PLAN.vb } };
+    svg.setPointerCapture(ev.pointerId); svg.style.cursor = 'grabbing';
+  });
+  svg.addEventListener('pointerup', ev => { drag = null; svg.style.cursor = ''; try { svg.releasePointerCapture(ev.pointerId); } catch (e) { /* not captured */ } });
+  svg.addEventListener('dblclick', () => { resetPlanView(); applyPlanView(); });
+  let raf = 0;
+  svg.addEventListener('pointermove', ev => {
+    if (drag) {
+      // screen pixels -> viewBox units of the view at drag start
+      // (preserveAspectRatio "meet": one factor for both axes)
+      const rect = svg.getBoundingClientRect();
+      const k = Math.max(drag.vb.w / rect.width, drag.vb.h / rect.height);
+      PLAN.vb = { ...drag.vb, x: drag.vb.x - (ev.clientX - drag.cx) * k, y: drag.vb.y - (ev.clientY - drag.cy) * k };
+      applyPlanView();
+      return;
+    }
+    if (raf || !PLAN.map || !PLAN.samples.length) return;
+    const p = toSvg(ev);
+    raf = requestAnimationFrame(() => {
+      raf = 0;
+      const M = PLAN.map;
+      const E = M.minX + (p.x - M.offX) / M.scale, N = M.minY + (PLAN.H - M.offY - p.y) / M.scale;
+      let best = PLAN.samples[0], bd = Infinity;
+      for (const q of PLAN.samples) { const dd = (q.E - E) ** 2 + (q.N - N) ** 2; if (dd < bd) { bd = dd; best = q; } }
+      const els = PLAN.elements;
+      const step = (els[els.length - 1].station - els[0].station) / 1500 + 1e-6;
+      const r = Engine.stationOffsetOf(els, E, N, Math.max(els[0].station, best.s - 2 * step), Math.min(els[els.length - 1].station, best.s + 2 * step));
+      const c = Engine.evalHorizontal(els, r.station);
+      const dot = svg.querySelector('#planDot'), tx = svg.querySelector('#planHover');
+      const cx = M.offX + (c.E - M.minX) * M.scale, cy = PLAN.H - M.offY - (c.N - M.minY) * M.scale;
+      dot.setAttribute('cx', cx); dot.setAttribute('cy', cy); dot.style.display = '';
+      const k = PLAN.vb.w / PLAN.W;
+      tx.setAttribute('x', p.x + 10 * k); tx.setAttribute('y', p.y - 10 * k);
+      tx.textContent = `PK ${Engine.formatPK(r.station)}  ofset ${r.offset >= 0 ? '+' : ''}${r.offset.toFixed(2)} m`;
+    });
+  });
+  svg.addEventListener('pointerleave', () => {
+    const dot = svg.querySelector('#planDot'), tx = svg.querySelector('#planHover');
+    if (dot) dot.style.display = 'none';
+    if (tx) tx.textContent = '';
+  });
+})();
+
+function drawProfile(elements) {
+  const svg = document.getElementById('svgProfil');
+  const pts = [];
+  const sMin = elements[0].station, sMax = elements[elements.length - 1].station;
+  const steps = 200;
+  for (let k = 0; k <= steps; k++) {
+    const s = sMin + (sMax - sMin) * (k / steps);
+    pts.push({ s, elev: Engine.evalVertical(elements, s) });
+  }
+  const xs = pts.map(p => p.s), ys = pts.map(p => p.elev);
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+  const pad = 30, W = 1000, H = 400;
+  const sx = (W - 2 * pad) / (maxX - minX || 1), sy = (H - 2 * pad) / ((maxY - minY) * 5 || 1);
+  const txP = s => pad + (s - minX) * sx;
+  const tyP = e => H - pad - (e - minY) * sy;
+  let d = 'M ' + pts.map(p => txP(p.s) + ' ' + tyP(p.elev)).join(' L ');
+  let markers = '';
+  for (const el of elements) {
+    const col = el.type === 'PARABOLA' ? '#4f8cff' : '#8f9bbd';
+    markers += `<circle cx="${txP(el.station)}" cy="${tyP(el.elev)}" r="3" fill="${col}"/>`;
+  }
+  svg.innerHTML = `<path d="${d}" fill="none" stroke="#e0a942" stroke-width="2"/>${markers}
+    <text x="8" y="16" fill="#8f9bbd" font-size="11">düşey ölçek 5x abartılmıştır</text>`;
+}
+
+/* ============================================================
+   EXPORT
+   ============================================================ */
+// file names: keep letters/digits (incl. Turkish), '-' and '_' only
+function safeName() {
+  const n = (document.getElementById('routeName').value || 'GUZERGAH').trim();
+  return n.replace(/[^\p{L}\p{N}_-]+/gu, '_') || 'GUZERGAH';
+}
+document.getElementById('dlAln').addEventListener('click', () => {
+  downloadBytes(toTurkishBytes(STATE.alnText), 'ALN_' + safeName() + '.gsi');
+});
+document.getElementById('dlPrf').addEventListener('click', () => {
+  if (!STATE.clippedV) {
+    alert('Bu aralıkta düşey profil verisi olmadığı için PRF üretilemez.');
+    return;
+  }
+  downloadBytes(toTurkishBytes(STATE.prfText), 'PRF_' + safeName() + '.gsi');
+});
+
+document.getElementById('dlXml').addEventListener('click', () => withBusy(() => {
+  const useSpiral = document.getElementById('useSpiral').checked;
+  const name = (document.getElementById('routeName').value || 'GUZERGAH').trim() || 'GUZERGAH';
+  // NOTE: the LandXML export always represents the FULL design alignment
+  // (raw PVI list, full PI chain) -- not the PK-range clip used for the
+  // ALN/PRF field files, since GNSS/RTK roading import expects the
+  // complete alignment.
+  const opts = { name, pvis: STATE.pvis, useSpiral, crossSections: STATE.crossSections };
+  if (STATE.source === 'ktb') {
+    opts.pis = STATE.pis.map(p => ({ name: p.name, E: p.E, N: p.N, R: p.R, Ls1: p.Ls1, Ls2: p.Ls2 }));
+    opts.staStart = STATE.fullH[0].station;
+  } else {
+    opts.horizontal = STATE.landxmlExactH || STATE.landxmlCollapsedH;
+    opts.source = STATE.landxmlSource; // alignment + profile copied verbatim
+  }
+  if (STATE.crossSections && STATE.crossSections.length && STATE.fullH) {
+    try {
+      opts.breaklines = Engine.buildCrossSectionBreaklines(STATE.crossSections, STATE.fullH);
+      if (document.getElementById('useMesh').checked) {
+        opts.mesh = Engine.buildCrossSectionMesh(STATE.crossSections, STATE.fullH);
+      }
+    } catch (err) {
+      console.error('Kesit -> 3B dönüşümü başarısız:', err);
+      alert('Enkesitlerden yüzey üretilemedi (' + err.message + '); LandXML enkesit yüzeyi olmadan üretilecek.');
+    }
+  }
+  const xml = Engine.writeLandXML(opts);
+  downloadText(xml, safeName() + '_gnss.xml');
+}));
+
+/* ============================================================
+   STAKEOUT TABLE / POINT QUERY
+   ============================================================ */
+function parseOffsets(txt) {
+  // "-3.5, 0, 3.5" / "-3.5 0 3.5" (dot decimals) or "-3,5; 0; 3,5" (comma decimals, ';' separated)
+  const t = String(txt).trim();
+  const parts = t.includes(';') ? t.split(';').map(x => x.trim().replace(',', '.')) : t.split(/[,\s]+/);
+  const vals = parts.filter(Boolean).map(Number);
+  if (vals.some(v => !Number.isFinite(v))) return null;
+  return [...new Set(vals)].sort((a, b) => a - b);
+}
+document.getElementById('btnStake').addEventListener('click', () => withBusy(() => {
+  const interval = parseFloat(document.getElementById('stakeInterval').value);
+  const offsets = parseOffsets(document.getElementById('stakeOffsets').value);
+  const out = document.getElementById('stakeMsg');
+  out.innerHTML = '';
+  if (!(interval >= 0)) { msg(out, 'err', 'Aralık 0 veya pozitif olmalı (0 = yalnız ana noktalar).'); return; }
+  if (!offsets || !offsets.length) { msg(out, 'err', 'Ofsetleri sayı olarak, virgül ve boşlukla ayırarak girin (örn. -3.5, 0, 3.5).'); return; }
+  const { s, e } = STATE.clipRange;
+  const count = (interval > 0 ? Math.ceil((e - s) / interval) + 2 : 2) * offsets.length;
+  if (count > 200000) { msg(out, 'err', `Çok fazla nokta (${count}). Aralığı büyütün veya PK aralığını daraltın.`); return; }
+  const keys = document.getElementById('stakeKeys').checked;
+  if (interval === 0 && !keys) { msg(out, 'err', 'Aralık 0 iken ana noktalar seçili olmalı.'); return; }
+  STATE.stakeRows = Engine.generateStakeout({
+    horizontal: STATE.fullH, vertical: STATE.hasVertical ? STATE.fullV : null,
+    crossSections: STATE.crossSections, sStart: s, sEnd: e, interval, offsets, keyPoints: keys,
+  });
+  const rows = STATE.stakeRows;
+  const f3 = v => (v == null ? '—' : v.toFixed(3));
+  let html = '<thead><tr><th>No</th><th>PK</th><th>Etiket</th><th>Ofset</th><th>Y (Sağa)</th><th>X (Yukarı)</th><th>Z eksen</th><th>Z kesit</th></tr></thead><tbody>';
+  const shown = rows.slice(0, 2000);
+  for (const r of shown) {
+    html += `<tr><td>${r.no}</td><td>${r.pk}</td><td>${escHtml(r.tag)}</td><td>${r.offset.toFixed(2)}</td><td>${r.E.toFixed(3)}</td><td>${r.N.toFixed(3)}</td><td>${f3(r.zAxis)}</td><td>${f3(r.zXs)}</td></tr>`;
+  }
+  document.getElementById('tblStake').innerHTML = html + '</tbody>';
+  msg(out, 'ok', `✔ ${rows.length} nokta hesaplandı${rows.length > shown.length ? ` (ilk ${shown.length} tanesi gösteriliyor, dosyalarda hepsi var)` : ''}.`);
+  document.getElementById('dlStakeCsv').disabled = false;
+  document.getElementById('dlStakeTxt').disabled = false;
+}));
+function stakePointName(r) {
+  const side = r.offset === 0 ? 'EKS' : (r.offset < 0 ? 'SL' : 'SG') + Math.abs(r.offset).toFixed(2);
+  return `${r.pk}_${side}`;
+}
+document.getElementById('dlStakeCsv').addEventListener('click', () => {
+  if (!STATE.stakeRows) return;
+  // Turkish Excel: ';' separator, ',' decimal, UTF-8 BOM
+  const c = v => (v == null ? '' : v.toFixed(3).replace('.', ','));
+  const lines = ['No;Nokta;PK;PK (m);Etiket;Ofset;Y (Sağa);X (Yukarı);Z eksen;Z kesit'];
+  for (const r of STATE.stakeRows) {
+    lines.push([r.no, stakePointName(r), r.pk, c(r.station), r.tag, c(r.offset), c(r.E), c(r.N), c(r.zAxis), c(r.zXs)].join(';'));
+  }
+  const bytes = new TextEncoder().encode('﻿' + lines.join('\r\n') + '\r\n');
+  downloadBytes(bytes, 'APLIKASYON_' + safeName() + '.csv', 'text/csv;charset=utf-8');
+});
+document.getElementById('dlStakeTxt').addEventListener('click', () => {
+  if (!STATE.stakeRows) return;
+  const lines = STATE.stakeRows.map(r => {
+    const z = r.zXs != null ? r.zXs : (r.offset === 0 && r.zAxis != null ? r.zAxis : 0);
+    return `${stakePointName(r)} ${r.E.toFixed(3)} ${r.N.toFixed(3)} ${z.toFixed(3)}`;
+  });
+  downloadBytes(toTurkishBytes(lines.join('\r\n') + '\r\n'), 'APLIKASYON_' + safeName() + '.txt', 'text/plain');
+});
+
+document.getElementById('btnQFwd').addEventListener('click', () => {
+  const s = parseFloat(document.getElementById('qPk').value);
+  const o = parseFloat(document.getElementById('qOff').value) || 0;
+  const out = document.getElementById('qOut');
+  const h = STATE.fullH;
+  if (!Number.isFinite(s)) { out.textContent = 'PK girin.'; return; }
+  if (s < STATE.routeMinSta - 1e-6 || s > STATE.routeMaxSta + 1e-6) {
+    out.textContent = `PK güzergah dışında (${STATE.routeMinSta.toFixed(3)} – ${STATE.routeMaxSta.toFixed(3)}).`;
+    return;
+  }
+  const p = Engine.pointAt(h, s, o);
+  const zA = STATE.hasVertical && s >= STATE.vMinSta - 1e-6 && s <= STATE.vMaxSta + 1e-6 ? Engine.evalVertical(STATE.fullV, s) : null;
+  const zX = Engine.xsElevation(STATE.crossSections, s, o);
+  const dir = Engine.evalHorizontalDir(h, s) * 200 / Math.PI;
+  out.textContent = `PK ${Engine.formatPK(s)}  ofset ${o.toFixed(3)}  →  Y ${p.E.toFixed(3)}  X ${p.N.toFixed(3)}`
+    + (zA != null ? `  Z eksen ${zA.toFixed(3)}` : '') + (zX != null ? `  Z kesit ${zX.toFixed(3)}` : '')
+    + `  (eksen semti ${(((dir % 400) + 400) % 400).toFixed(4)} grad)`;
+  document.getElementById('qE').value = p.E.toFixed(3);
+  document.getElementById('qN').value = p.N.toFixed(3);
+});
+document.getElementById('btnQInv').addEventListener('click', () => {
+  const E = parseFloat(document.getElementById('qE').value), N = parseFloat(document.getElementById('qN').value);
+  const out = document.getElementById('qOut');
+  if (!Number.isFinite(E) || !Number.isFinite(N)) { out.textContent = 'Y ve X girin.'; return; }
+  const r = Engine.stationOffsetOf(STATE.fullH, E, N);
+  out.textContent = `Y ${E.toFixed(3)}  X ${N.toFixed(3)}  →  PK ${Engine.formatPK(r.station)} (${r.station.toFixed(3)} m)  ofset ${r.offset >= 0 ? '+' : ''}${r.offset.toFixed(3)} m`
+    + (r.outside ? '  ⚠ nokta güzergahın başlangıç/bitişinin dışında, en yakın uç verildi' : '');
+  document.getElementById('qPk').value = r.station.toFixed(3);
+  document.getElementById('qOff').value = r.offset.toFixed(3);
+});
+
+/* ============================================================
+   REMEMBERED SETTINGS (per browser; never required)
+   ============================================================ */
+(function persistSettings() {
+  const KEY = 'yolGuzergahAyarlar.v1';
+  const ids = ['tolInput', 'routeName', 'useSpiral', 'useMesh', 'stakeInterval', 'stakeOffsets', 'stakeKeys'];
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { saved = {}; }
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (!el || !(id in saved)) continue;
+    if (el.type === 'checkbox') el.checked = !!saved[id]; else el.value = saved[id];
+  }
+  const save = () => {
+    const o = {};
+    for (const id of ids) { const el = document.getElementById(id); o[id] = el.type === 'checkbox' ? el.checked : el.value; }
+    try { localStorage.setItem(KEY, JSON.stringify(o)); } catch (e) { /* storage unavailable: ignore */ }
+  };
+  ids.forEach(id => document.getElementById(id).addEventListener('change', save));
+})();
+
+/* ============================================================
+   VALIDATE / COMPARE
+   ============================================================ */
+document.getElementById('btnCompare').addEventListener('click', () => {
+  const refAlnText = document.getElementById('refAln').value.trim();
+  const refPrfText = document.getElementById('refPrf').value.trim();
+  let html = '';
+  if (refAlnText) {
+    try {
+      const ref = Engine.parseALNFile(refAlnText);
+      const comp = Engine.parseALNFile(Engine.writeALN(STATE.clippedHForGSI));
+      html += '<h3 style="font-size:13px;margin:10px 0 6px">ALN karşılaştırması</h3>' + diffTable(ref, comp, 'aln');
+    } catch (e) { html += `<div class="msg err">ALN ayrıştırılamadı: ${e.message}</div>`; }
+  }
+  if (refPrfText) {
+    try {
+      if (!STATE.clippedV) throw new Error('bu güzergahta düşey profil verisi yok.');
+      const ref = Engine.parsePRFFile(refPrfText);
+      const comp = Engine.parsePRFFile(Engine.writePRF(STATE.clippedV));
+      html += '<h3 style="font-size:13px;margin:10px 0 6px">PRF karşılaştırması</h3>' + diffTable(ref, comp, 'prf');
+    } catch (e) { html += `<div class="msg err">PRF ayrıştırılamadı: ${e.message}</div>`; }
+  }
+  if (!html) html = '<div class="msg warn">Karşılaştırmak için en az bir referans dosya içeriği yapıştırın.</div>';
+  document.getElementById('compareOut').innerHTML = html;
+});
+
+function diffTable(ref, comp, kind) {
+  let rows = '';
+  // Pair each reference record with the nearest computed record of the
+  // same type (by station), not by row index -- a single extra/missing
+  // record would otherwise shift every later row and flag them all red.
+  const used = new Set();
+  let unmatched = 0;
+  for (const r of ref) {
+    let best = -1, bestD = Infinity;
+    const search = sameType => comp.forEach((c, j) => {
+      if (used.has(j) || (sameType && c.type !== r.type)) return;
+      const d = Math.abs(c.station - r.station);
+      if (d < bestD) { bestD = d; best = j; }
+    });
+    search(true);
+    if (best < 0 || bestD > 50) { best = -1; bestD = Infinity; search(false); } // type names may differ
+    if (best < 0 || bestD > 50) {
+      unmatched++;
+      rows += `<tr class="diffbad"><td>${escHtml(r.type)}</td><td>${r.station.toFixed(3)}</td><td colspan="2">hesaplananda karşılığı yok</td></tr>`;
+      continue;
+    }
+    used.add(best);
+    const c = comp[best];
+    let dSta = c.station - r.station;
+    let extra, val;
+    if (kind === 'aln') {
+      const dXY = (c.E != null && r.E != null) ? Math.hypot(c.E - r.E, c.N - r.N) : null;
+      val = dXY;
+      extra = `<td>${dXY != null ? dXY.toFixed(3) : '-'}</td>`;
+    } else {
+      const dElev = (c.elev != null && r.elev != null) ? c.elev - r.elev : null;
+      val = dElev != null ? Math.abs(dElev) : null;
+      extra = `<td>${dElev != null ? dElev.toFixed(3) : '-'}</td>`;
+    }
+    const cls = val == null ? '' : (val < 0.05 ? 'diffgood' : val < 0.5 ? 'diffwarn' : 'diffbad');
+    rows += `<tr class="${cls}"><td>${escHtml(r.type)}</td><td>${r.station.toFixed(3)}</td><td>${dSta.toFixed(3)}</td>${extra}</tr>`;
+  }
+  const extraComp = comp.length - used.size;
+  const countNote = (unmatched || extraComp)
+    ? `<div class="msg warn">Referansta ${ref.length}, hesaplananda ${comp.length} kayıt var: ${unmatched} referans kaydının karşılığı yok, `
+      + `hesaplananda ${extraComp} fazla kayıt var.</div>` : '';
+  const header = kind === 'aln'
+    ? '<tr><th>Tür</th><th>Ref. PK</th><th>ΔPK</th><th>Δ(E,N) mesafe</th></tr>'
+    : '<tr><th>Tür</th><th>Ref. PK</th><th>ΔPK</th><th>ΔKot</th></tr>';
+  return `${countNote}<div class="tablewrap"><table><thead>${header}</thead><tbody>${rows}</tbody></table></div>
+    <div class="hint">Yeşil: &lt;5cm · Sarı: &lt;50cm · Kırmızı: ≥50cm fark.</div>`;
+}
+
+</script>
+</body>
+</html>
