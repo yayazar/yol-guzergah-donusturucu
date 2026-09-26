@@ -2,6 +2,8 @@
 
 Tarayıcıda çalışan tek sayfalık araç. Netcad KTB ya da Civil3D/Netcad LandXML güzergahını Leica GSI-16 ALN ve PRF dosyalarına çevirir. GNSS aplikasyonu için bir LandXML dosyası da üretir.
 
+Canlı adres: https://yoldonusum.vercel.app
+
 - **Girdi:** `.ktb` (Netcad) ya da `.xml` / `.landxml` (LandXML). İsteğe bağlı olarak `.ksp` / `.kse` enkesit dosyası da eklenebilir.
 - **Çıktı:** ALN ve PRF (GSI-16, Windows-1254, CRLF) ile GNSS için LandXML.
 - **Gizlilik:** Tüm hesaplar tarayıcıda yapılır. Yüklenen dosyalar hiçbir sunucuya gönderilmez.
