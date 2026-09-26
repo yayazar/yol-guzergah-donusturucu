@@ -352,6 +352,23 @@ if (goldenDir) {
       const m = match(ref, comp, 'v');
       ok(m.worst <= tol && !m.missing, `${base}: PRF Netcad ile uyumlu (maks fark ${m.worst.toFixed(3)} m, eşleşmeyen ${m.missing})`);
     }
+    {
+      // v2.9: KTB -> LandXML must describe the same vertical circles. Netcad
+      // reads radius * |dtheta| back as L, so that product must equal the KTB
+      // L and give back the KTB R (= L / |dsin|).
+      const xml = E.writeLandXML({ name: base, pvis: ktb.pvis, pis: ktb.pis });
+      const cc = [...xml.matchAll(/<CircCurve length="([^"]+)" radius="([^"]+)">([^ <]+) ([^<]+)<\/CircCurve>/g)];
+      const inner = ktb.pvis.filter((p, i) => i > 0 && i < ktb.pvis.length - 1 && p.L > 0);
+      let worstL = 0, worstR = 0;
+      cc.forEach((m, k) => {
+        const i = ktb.pvis.indexOf(inner[k]), p = ktb.pvis[i], q = ktb.pvis[i - 1], r = ktb.pvis[i + 1];
+        const t1 = Math.atan((p.elev - q.elev) / (p.station - q.station)), t2 = Math.atan((r.elev - p.elev) / (r.station - p.station));
+        const Lback = Number(m[2]) * Math.abs(t2 - t1);
+        worstL = Math.max(worstL, Math.abs(Lback - p.L), Math.abs(Number(m[1]) - p.L));
+        if (p.radius > 0) worstR = Math.max(worstR, Math.abs(Lback / Math.abs(Math.sin(t2) - Math.sin(t1)) - p.radius));
+      });
+      ok(cc.length === inner.length && worstL < 1e-6 && worstR < 1e-3, `${base}: KTB → LandXML düşey kurplar aynı (L farkı ${worstL.toExponential(1)}, R farkı ${worstR.toFixed(4)} m)`);
+    }
     if (!a && !pr) console.log(`  – ${base}: karşılaştırılacak _ALN.gsi / _PRF.gsi yok`);
   }
 }

@@ -243,7 +243,7 @@
 
 <div id="busy">⏳ İşleniyor…</div>
 <footer>
-  <b>v2.8 (2026-09-25)</b> · Yatay: PI tabanlı daire-eşdeğer istasyonlama (GSI klotoid taşımaz); plan, enkesit ve aplikasyon
+  <b>v2.9 (2026-09-25)</b> · Yatay: PI tabanlı daire-eşdeğer istasyonlama (GSI klotoid taşımaz); plan, enkesit ve aplikasyon
   tablosu tasarım geometrisini (klotoidli) kullanır. Düşey: PVI tabanlı parabol (BVC/EVC), LandXML kaynağında aliyman ve profil çıktı XML'e birebir aktarılır; dairesel düşey kurplar dosyadaki yarıçapla
   gerçek daire olarak hesaplanır. 
   Dever tabloları ($D / $R) henüz desteklenmiyor.
@@ -2085,9 +2085,9 @@ const Engine = (function () {
     const tangent = R * Math.tan(delta / 2);
     const chord = 2 * R * Math.sin(delta / 2);
     const piTag = dirStart != null
-      ? `<PI>${(start.N + tangent * Math.cos(dirStart)).toFixed(4)} ${(start.E + tangent * Math.sin(dirStart)).toFixed(4)}</PI>`
+      ? `<PI>${(start.N + tangent * Math.cos(dirStart)).toFixed(8)} ${(start.E + tangent * Math.sin(dirStart)).toFixed(8)}</PI>`
       : '';
-    return `<Curve rot="${rotSign > 0 ? 'cw' : 'ccw'}" crvType="arc" radius="${R.toFixed(4)}" length="${length.toFixed(4)}" delta="${(delta * R2D).toFixed(6)}" tangent="${tangent.toFixed(4)}" chord="${chord.toFixed(4)}"><Start>${start.N.toFixed(4)} ${start.E.toFixed(4)}</Start><Center>${center.N.toFixed(4)} ${center.E.toFixed(4)}</Center><End>${end.N.toFixed(4)} ${end.E.toFixed(4)}</End>${piTag}</Curve>`;
+    return `<Curve rot="${rotSign > 0 ? 'cw' : 'ccw'}" crvType="arc" radius="${R.toFixed(8)}" length="${length.toFixed(8)}" delta="${(delta * R2D).toFixed(10)}" tangent="${tangent.toFixed(8)}" chord="${chord.toFixed(8)}"><Start>${start.N.toFixed(8)} ${start.E.toFixed(8)}</Start><Center>${center.N.toFixed(8)} ${center.E.toFixed(8)}</Center><End>${end.N.toFixed(8)} ${end.E.toFixed(8)}</End>${piTag}</Curve>`;
   }
 
   // Standard clothoid tangent distances (from the TS/ST end towards the
@@ -2100,8 +2100,8 @@ const Engine = (function () {
     return { th, tanLong: X - Y / Math.tan(th), tanShort: Y / Math.sin(th) };
   }
   function spiralXml(rot, length, radiusStart, radiusEnd, start, end, piPoint) {
-    const piTag = piPoint ? `<PI>${piPoint.N.toFixed(4)} ${piPoint.E.toFixed(4)}</PI>` : '';
-    return `<Spiral rot="${rot}" length="${length.toFixed(4)}" radiusStart="${radiusStart}" radiusEnd="${radiusEnd}" spiType="clothoid"><Start>${start.N.toFixed(4)} ${start.E.toFixed(4)}</Start>${piTag}<End>${end.N.toFixed(4)} ${end.E.toFixed(4)}</End></Spiral>`;
+    const piTag = piPoint ? `<PI>${piPoint.N.toFixed(8)} ${piPoint.E.toFixed(8)}</PI>` : '';
+    return `<Spiral rot="${rot}" length="${length.toFixed(8)}" radiusStart="${radiusStart}" radiusEnd="${radiusEnd}" spiType="clothoid"><Start>${start.N.toFixed(8)} ${start.E.toFixed(8)}</Start>${piTag}<End>${end.N.toFixed(8)} ${end.E.toFixed(8)}</End></Spiral>`;
   }
 
   function writeLandXML(opts) {
@@ -2148,10 +2148,10 @@ const Engine = (function () {
           const t2 = spiralTangents(Ls2, R);
           const spiralPI1 = { E: TS.E + t1.tanLong * Math.sin(az_in), N: TS.N + t1.tanLong * Math.cos(az_in) };
           const spiralPI2 = { E: ST.E - t2.tanLong * Math.sin(az_out), N: ST.N - t2.tanLong * Math.cos(az_out) };
-          geomLines.push(`<Line><Start>${prevPt.N.toFixed(4)} ${prevPt.E.toFixed(4)}</Start><End>${TS.N.toFixed(4)} ${TS.E.toFixed(4)}</End></Line>`);
-          geomLines.push(spiralXml(sign > 0 ? 'cw' : 'ccw', Ls1, 'INF', R.toFixed(4), TS, SC, spiralPI1));
+          geomLines.push(`<Line><Start>${prevPt.N.toFixed(8)} ${prevPt.E.toFixed(8)}</Start><End>${TS.N.toFixed(8)} ${TS.E.toFixed(8)}</End></Line>`);
+          geomLines.push(spiralXml(sign > 0 ? 'cw' : 'ccw', Ls1, 'INF', R.toFixed(8), TS, SC, spiralPI1));
           geomLines.push(curveXml(sign, R, SC, CS, center, Lc, deltaC, dirAtSC));
-          geomLines.push(spiralXml(sign > 0 ? 'cw' : 'ccw', Ls2, R.toFixed(4), 'INF', CS, ST, spiralPI2));
+          geomLines.push(spiralXml(sign > 0 ? 'cw' : 'ccw', Ls2, R.toFixed(8), 'INF', CS, ST, spiralPI2));
           prevPt = ST;
         } else if (R && ad > 1e-9) {
           const T = Math.abs(R) * Math.tan(ad / 2);
@@ -2160,20 +2160,20 @@ const Engine = (function () {
           const PT = { E: pis[i].E + T * Math.sin(az_out), N: pis[i].N + T * Math.cos(az_out) };
           const center = curveCenter(PC, az_in, Rabs, sign);
           const L = Rabs * ad;
-          geomLines.push(`<Line><Start>${prevPt.N.toFixed(4)} ${prevPt.E.toFixed(4)}</Start><End>${PC.N.toFixed(4)} ${PC.E.toFixed(4)}</End></Line>`);
+          geomLines.push(`<Line><Start>${prevPt.N.toFixed(8)} ${prevPt.E.toFixed(8)}</Start><End>${PC.N.toFixed(8)} ${PC.E.toFixed(8)}</End></Line>`);
           geomLines.push(curveXml(sign, Rabs, PC, PT, center, L, ad, az_in));
           prevPt = PT;
         }
         else if (ad > 1e-9) {
           // R=0 corner: end the Line AT the PI so the next one starts there
           // (otherwise the corner is cut by a single straight Line)
-          geomLines.push(`<Line><Start>${prevPt.N.toFixed(4)} ${prevPt.E.toFixed(4)}</Start><End>${pis[i].N.toFixed(4)} ${pis[i].E.toFixed(4)}</End></Line>`);
+          geomLines.push(`<Line><Start>${prevPt.N.toFixed(8)} ${prevPt.E.toFixed(8)}</Start><End>${pis[i].N.toFixed(8)} ${pis[i].E.toFixed(8)}</End></Line>`);
           prevPt = pis[i];
         }
         // else: collinear PI -- tangent simply continues through it
       }
       const last = pis[pis.length - 1];
-      geomLines.push(`<Line><Start>${prevPt.N.toFixed(4)} ${prevPt.E.toFixed(4)}</Start><End>${last.N.toFixed(4)} ${last.E.toFixed(4)}</End></Line>`);
+      geomLines.push(`<Line><Start>${prevPt.N.toFixed(8)} ${prevPt.E.toFixed(8)}</Start><End>${last.N.toFixed(8)} ${last.E.toFixed(8)}</End></Line>`);
     } else if (horizontal) {
       // LandXML source re-export: use the already-explicit elements
       // (Line/Spiral/Curve) exactly as parsed, including real spirals --
@@ -2185,13 +2185,13 @@ const Engine = (function () {
         const n = horizontal[i + 1];
         if (!n) continue;
         if (e.type === 'STRAIGHT') {
-          geomLines.push(`<Line><Start>${e.N.toFixed(4)} ${e.E.toFixed(4)}</Start><End>${n.N.toFixed(4)} ${n.E.toFixed(4)}</End></Line>`);
+          geomLines.push(`<Line><Start>${e.N.toFixed(8)} ${e.E.toFixed(8)}</Start><End>${n.N.toFixed(8)} ${n.E.toFixed(8)}</End></Line>`);
         } else if (e.type === 'SPIRAL') {
           const endE = e.endE != null ? e.endE : n.E, endN = e.endN != null ? e.endN : n.N;
           const rot = e.sign > 0 ? 'cw' : 'ccw';
-          const rStart = e.entry ? 'INF' : e.radius.toFixed(4);
-          const rEnd = e.entry ? e.radius.toFixed(4) : 'INF';
-          geomLines.push(`<Spiral rot="${rot}" length="${e.length.toFixed(4)}" radiusStart="${rStart}" radiusEnd="${rEnd}" spiType="clothoid"><Start>${e.N.toFixed(4)} ${e.E.toFixed(4)}</Start><End>${endN.toFixed(4)} ${endE.toFixed(4)}</End></Spiral>`);
+          const rStart = e.entry ? 'INF' : e.radius.toFixed(8);
+          const rEnd = e.entry ? e.radius.toFixed(8) : 'INF';
+          geomLines.push(`<Spiral rot="${rot}" length="${e.length.toFixed(8)}" radiusStart="${rStart}" radiusEnd="${rEnd}" spiType="clothoid"><Start>${e.N.toFixed(8)} ${e.E.toFixed(8)}</Start><End>${endN.toFixed(8)} ${endE.toFixed(8)}</End></Spiral>`);
         } else if (e.type === 'CURVE') {
           const Rabs = Math.abs(e.radius);
           const sign = e.radius >= 0 ? 1 : -1;
@@ -2213,12 +2213,16 @@ const Engine = (function () {
         // text (<CircCurve length radius>PK KOT</CircCurve>), full precision
         const pt = `${+v.station.toFixed(8)} ${+v.elev.toFixed(8)}`;
         if (i > 0 && i < pvis.length - 1 && v.L > 0 && v.curveType === 'circ') {
-          // keep a circular vertical curve circular on re-export; the file's
-          // own radius (KTB column R / LandXML radius) is used as-is
+          // Written the way Civil3D writes it and Netcad reads it back: the
+          // radius satisfies radius * |dtheta| = length. Netcad takes that
+          // product as its curve length L, so KTB -> LandXML -> Netcad gives
+          // back the same L, T1/T2 and R. Writing the KTB column R here (it is
+          // L / |dsin|, Netcad's own convention) made Netcad re-read a ~1-2 %
+          // longer curve with a different R.
           const g1 = (v.elev - pvis[i - 1].elev) / (v.station - pvis[i - 1].station);
           const g2 = (pvis[i + 1].elev - v.elev) / (pvis[i + 1].station - v.station);
-          const ds = Math.abs(Math.sin(Math.atan(g2)) - Math.sin(Math.atan(g1)));
-          const rad = v.radius > 0 ? v.radius : ds > 1e-12 ? v.L / ds : 0;
+          const dth = Math.abs(Math.atan(g2) - Math.atan(g1));
+          const rad = dth > 1e-12 ? v.L / dth : 0;
           profLines.push(`<CircCurve length="${+v.L.toFixed(8)}" radius="${+rad.toFixed(8)}">${pt}</CircCurve>`);
         } else if (i > 0 && i < pvis.length - 1 && v.L > 0) {
           profLines.push(`<ParaCurve length="${+v.L.toFixed(8)}">${pt}</ParaCurve>`);
