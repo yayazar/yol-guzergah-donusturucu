@@ -122,10 +122,6 @@
         <label>Güzergah adı</label>
         <input type="text" id="routeName" value="GUZERGAH">
       </div>
-      <div>
-        <label>Aralık ucu birleştirme toleransı (m)</label>
-        <input type="number" id="tolInput" value="1.0" step="0.1">
-      </div>
     </div>
     <div class="row" style="margin-top:10px">
       <label class="chk"><input type="checkbox" id="useSpiral"> KTB'den LandXML üretirken gerçek klotoid (S-C-S) geometrisi kullan (yalnız Ls1=Ls2 simetrik geçiş eğrilerinde; asimetrik olanlarda daire ile eşdeğerlenir). LandXML kaynağında aliyman ve profil değiştirilmeden aynen aktarılır.</label>
@@ -247,7 +243,7 @@
 
 <div id="busy">⏳ İşleniyor…</div>
 <footer>
-  <b>v2.7 (2026-09-25)</b> · Yatay: PI tabanlı daire-eşdeğer istasyonlama (GSI klotoid taşımaz); plan, enkesit ve aplikasyon
+  <b>v2.8 (2026-09-25)</b> · Yatay: PI tabanlı daire-eşdeğer istasyonlama (GSI klotoid taşımaz); plan, enkesit ve aplikasyon
   tablosu tasarım geometrisini (klotoidli) kullanır. Düşey: PVI tabanlı parabol (BVC/EVC), LandXML kaynağında aliyman ve profil çıktı XML'e birebir aktarılır; dairesel düşey kurplar dosyadaki yarıçapla
   gerçek daire olarak hesaplanır. 
   Dever tabloları ($D / $R) henüz desteklenmiyor.
@@ -1216,7 +1212,13 @@ const Engine = (function () {
   // delete a real element: a grade break / corner / PT closer than `tol` to
   // its neighbour is still real geometry (dropping such knots used to shift
   // elevations and positions). list = [clipStart, ...real, clipEnd].
-  function dedupeByStation(list, tol) {
+  // Only an inserted range-end record that COINCIDES (< 1 mm) with a real
+  // knot is dropped. Netcad keeps every knot, also one a few decimetres
+  // from the route start/end (e.g. an EVC 0.7 m before the end): merging
+  // such knots into the end record used to lose the last/first geometry
+  // record ("referansta 14, hesaplananda 13 kayıt").
+  function dedupeByStation(list) {
+    const tol = 1e-3;
     const PROTECTED = new Set(['CURVE', 'PARABOLA', 'SPIRAL']);
     const out = list.slice();
     // start: a plain straight start record followed closely by a real element
@@ -2804,8 +2806,7 @@ document.getElementById('btnCompute').addEventListener('click', () => withBusy(r
 function runCompute() {
   let s = parseFloat(document.getElementById('pkStart').value);
   let e = parseFloat(document.getElementById('pkEnd').value);
-  const tol = parseFloat(document.getElementById('tolInput').value);
-  if (!(tol >= 0)) { alert('Birleştirme toleransı 0 veya pozitif bir sayı olmalı.'); return; }
+  const tol = 1.0; // only used to pick the cross sections just outside the range
   if (isNaN(s) || isNaN(e) || e <= s) {
     alert('Geçerli bir PK aralığı girin (bitiş > başlangıç).');
     return;
@@ -3323,7 +3324,7 @@ document.getElementById('btnQInv').addEventListener('click', () => {
    ============================================================ */
 (function persistSettings() {
   const KEY = 'yolGuzergahAyarlar.v1';
-  const ids = ['tolInput', 'routeName', 'useSpiral', 'useMesh', 'stakeInterval', 'stakeOffsets', 'stakeKeys'];
+  const ids = ['routeName', 'useSpiral', 'useMesh', 'stakeInterval', 'stakeOffsets', 'stakeKeys'];
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { saved = {}; }
   for (const id of ids) {

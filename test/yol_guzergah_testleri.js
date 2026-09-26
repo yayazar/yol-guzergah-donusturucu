@@ -192,6 +192,21 @@ console.log('\n[4b] Toleranstan yakın gerçek düğümler silinmiyor');
   ok(c2[0].station === 0.4 && c2[c2.length - 1].type === 'EOP' && c2[c2.length - 1].station === 499.5, 'Aralık uçları istenen PK\'da');
 }
 
+console.log('\n[4c] Güzergah ucuna 1 m\'den yakın düğümler kaybolmuyor (v2.8)');
+{
+  // EVC 0.6 m before the route end and BVC 0.7 m after the start: Netcad
+  // writes every knot, so the record count must equal the full chain.
+  const pv = [{ station: 0, elev: 100, L: 0 }, { station: 30.7, elev: 101, L: 60 }, { station: 250, elev: 106, L: 0 }, { station: 470, elev: 102, L: 58.8 }, { station: 500, elev: 103, L: 0 }];
+  const v = E.computeVertical(pv);
+  const end = v[v.length - 1].station;
+  const c = E.clipVertical(v, 0, end, 1);
+  ok(c.length === v.length, `PRF kayıt sayısı tam güzergahla aynı (${c.length} / ${v.length})`);
+  ok(c[c.length - 1].type === 'EOP' && c[c.length - 2].type !== 'EOP' && end - c[c.length - 2].station < 1, 'Sondaki EVC ve EOP ayrı kayıt olarak yazılıyor');
+  ok(c[0].station === 0 && c[1].station < 1, 'Baştaki kayıt ve 1 m içindeki BVC ayrı kayıt');
+  const recs = E.parsePRFFile(E.writePRF(c));
+  ok(recs.length === v.length, 'PRF dosyasında da kayıt sayısı aynı');
+}
+
 console.log('\n[5] GSI yaz → oku → kontrol');
 {
   const h = E.computeHorizontal(PIS).elements;
